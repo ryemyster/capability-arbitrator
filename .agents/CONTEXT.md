@@ -1,0 +1,3 @@
+- Architecture: This agent is a "Capability Arbitrator". It must always ask "What capability is required?" before assigning a resource.
+- Progressive Disclosure: Do not load all tools into the context window at once.
+- Fast Scouting: Always use `gemini-3.5-flash` for the initial intent classification (the Scout node) to preserve the reasoning budget.
