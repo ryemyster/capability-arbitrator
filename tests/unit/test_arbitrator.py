@@ -18,12 +18,10 @@ Tests deterministic math solving, prompt parsing, and skill instruction loading.
 
 from unittest.mock import MagicMock
 
-from app.agent import (
-    get_prompt_text,
-    load_researcher_instructions,
-    security_screen,
-    solve_math,
-)
+from app.agent import security_screen
+from app.app_utils.routing_utils import get_prompt_text
+from app.app_utils.math_utils import solve_math
+from app.app_utils.skill_utils import load_skill_instructions
 
 
 def test_solve_math_operations() -> None:
@@ -53,10 +51,17 @@ def test_get_prompt_text_extraction() -> None:
 
 def test_load_researcher_instructions() -> None:
     """Verifies that the researcher SOP is correctly loaded or falls back gracefully."""
-    instructions = load_researcher_instructions()
+    instructions = load_skill_instructions("researcher")
     assert instructions is not None
     # Check that either the fallback or actual SOP markdown is returned
     assert "research" in instructions.lower() or "sop" in instructions.lower()
+
+
+def test_load_stride_instructions() -> None:
+    """Verifies that the STRIDE threat modeling SOP is correctly loaded or falls back gracefully."""
+    instructions = load_skill_instructions("stride")
+    assert instructions is not None
+    assert "stride" in instructions.lower() or "sop" in instructions.lower()
 
 
 def test_security_screen_pii_detection() -> None:

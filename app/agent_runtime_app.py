@@ -21,7 +21,7 @@ Updated: 2026-06-23T13:17:56-06:00
 # limitations under the License.
 import logging
 import os
-from typing import Any
+from typing import Any, AsyncGenerator
 
 import vertexai
 from dotenv import load_dotenv
@@ -76,7 +76,7 @@ class AgentEngineApp(AdkApp):
         session_events: list[dict[str, Any]] | None = None,
         run_config: dict[str, Any] | None = None,
         **kwargs,
-    ):
+    ) -> AsyncGenerator[Any, None]:
         """Intercepts streaming query to run locally in integration tests."""
         if os.environ.get("INTEGRATION_TEST") == "TRUE":
             from google.adk.runners import InMemoryRunner

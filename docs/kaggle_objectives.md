@@ -47,8 +47,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 *   **[x] Uses a Persistent Context file (`CONTEXT.md`)**
     *   *What:* Permanent baseline rules that govern the agent's runtime instructions.
     *   *Citation:* Completed in [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) and linked in [agents-cli-manifest.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/agents-cli-manifest.yaml).
-*   **[ ] (Optional) Implements a STRIDE Threat Modeling skill**
+*   **[x] (Optional) Implements a STRIDE Threat Modeling skill**
     *   *What:* A security analysis capability to automatically assess code for threat vectors.
+    *   *Citation:* *(Completed: Phase 10 [STRIDE Threat Modeling Skill] in [app/skills/stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md))*
 
 ### Section E: Quality & Evaluation
 
@@ -67,8 +68,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 ### Section F: Deployment & Production
 
-*   **[ ] Successfully deployed to Agent Runtime or Cloud Run**
+*   **[x] Successfully deployed to Agent Runtime or Cloud Run**
     *   *What:* Hosting the agent on Google Cloud so it is live.
+    *   *Citation:* *(Completed: Phase 5 [Remote Agent Runtime deployment] in [deployment_metadata.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/deployment_metadata.json))*
 *   **[ ] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
 *   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
@@ -80,8 +82,6 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 The following items are still required to achieve a gold-standard project submission:
 
-1.  **STRIDE Threat Modeling (Optional)** - Tracked in [GitHub Issue #9](https://github.com/ryemyster/capability-arbitrator/issues/9)
-2.  **Deployment to Cloud (Agent Runtime)** - Tracked in [GitHub Issue #4](https://github.com/ryemyster/capability-arbitrator/issues/4)
-3.  **FastAPI Manager Dashboard & Stats for Nerds** - Tracked in [GitHub Issue #8](https://github.com/ryemyster/capability-arbitrator/issues/8)
-4.  **Pub/Sub Event Integration**
+1.  **FastAPI Manager Dashboard & Stats for Nerds** - Tracked in [GitHub Issue #8](https://github.com/ryemyster/capability-arbitrator/issues/8)
+2.  **Pub/Sub Event Integration**
 
