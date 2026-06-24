@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capability Arbitrator - Governance & Telemetry Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0d19 0%, #06070c 100%);
+            --panel-bg: rgba(255, 255, 255, 0.03);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --accent-success: #10b981;
+            --accent-success-glow: rgba(16, 185, 129, 0.3);
+            --accent-alert: #f43f5e;
+            --accent-alert-glow: rgba(244, 63, 94, 0.3);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(11, 13, 25, 0.7);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(90deg, #a5b4fc, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            padding: 3rem 4rem;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            opacity: 0.3;
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+            color: #ffffff;
+        }
+
+        .stat-value.savings {
+            color: var(--accent-success);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Playground form */
+        .playground-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .btn-run {
+            background: var(--accent-primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            align-self: flex-end;
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        .btn-run:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .terminal {
+            background: #020306;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            padding: 1.5rem;
+            height: 250px;
+            overflow-y: auto;
+            color: #a7f3d0;
+            margin-top: 1.5rem;
+            white-space: pre-wrap;
+        }
+
+        /* Stats for Nerds overlay */
+        .hud-overlay {
+            background: rgba(11, 13, 25, 0.85);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .hud-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-primary);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+        }
+
+        .hud-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .hud-value.glow {
+            color: var(--accent-success);
+        }
+
+        /* History log table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.research { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .badge.coding { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge.math { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge.stride { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+        .badge.approval { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .toggle-hud {
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-hud:hover {
+            background: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Capability Arbitrator</h1>
+            <div class="subtitle">Outcome Governance & Live Telemetry Console</div>
+        </div>
+        <button class="toggle-hud" onclick="toggleHud()">Toggle Stats HUD</button>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Main Panel: Stats and Playground -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div class="card">
+                <h2>📊 Cumulative Efficiency Gains</h2>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value savings" id="val-total-savings">0.00%</div>
+                        <div class="stat-label">Token Savings Rate</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value savings" id="val-cost-savings">$0.00</div>
+                        <div class="stat-label">Est. Financial Savings</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-avg-scout-ttft">0.00s</div>
+                        <div class="stat-label">Scout Node TTFT</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-routing-accuracy">100%</div>
+                        <div class="stat-label">Routing Precision</div>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-pii-blocked">0</div>
+                        <div class="stat-label">PII Screens Triggered</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-hitl-escalations">0</div>
+                        <div class="stat-label">HITL Interrupt events</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-mcp-calls">0</div>
+                        <div class="stat-label">MCP Tool Actions</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Interactive Routing Playground</h2>
+                <div class="playground-form">
+                    <textarea id="prompt-input" placeholder="Type a prompt to test routing (e.g. 'Solve (12.5 * 40) / 5' or 'Conduct academic research on quantum computing')"></textarea>
+                    <button class="btn-run" onclick="runPrompt()">Execute Prompt</button>
+                </div>
+                <div class="terminal" id="terminal-out">Terminal output will stream here...</div>
+            </div>
+
+            <div class="card">
+                <h2>📜 Execution History Log</h2>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Prompt</th>
+                                <th>Route Tag</th>
+                                <th>Arb Footprint</th>
+                                <th>Mono Footprint</th>
+                                <th>Lat.</th>
+                                <th>Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Stats for Nerds HUD -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;" id="hud-sidebar">
+            <div class="hud-overlay">
+                <div class="hud-title">🤓 Stats for Nerds HUD</div>
+                <div class="hud-row">
+                    <span>Scout Model:</span>
+                    <span class="hud-value" id="hud-scout-model">gemini-3.5-flash-lite</span>
+                </div>
+                <div class="hud-row">
+                    <span>Scout Latency (TTFT):</span>
+                    <span class="hud-value" id="hud-scout-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>Active Exec Node:</span>
+                    <span class="hud-value glow" id="hud-exec-node">None</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Node Latency:</span>
+                    <span class="hud-value" id="hud-exec-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>Total Tracing Latency:</span>
+                    <span class="hud-value" id="hud-total-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>PII Detected:</span>
+                    <span class="hud-value" id="hud-pii-detected">False</span>
+                </div>
+                <div class="hud-row">
+                    <span>HITL Intercept:</span>
+                    <span class="hud-value" id="hud-hitl-intercept">False</span>
+                </div>
+                
+                <div class="hud-title" style="margin-top: 1rem;">Token Saturation Profile</div>
+                <div class="hud-row">
+                    <span>Scout Context footprint:</span>
+                    <span class="hud-value" id="hud-scout-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Node Context footprint:</span>
+                    <span class="hud-value" id="hud-exec-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Total Arbitrator Window:</span>
+                    <span class="hud-value glow" id="hud-arb-total-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Simulated Monolithic Prompt:</span>
+                    <span class="hud-value" style="color: var(--accent-alert);" id="hud-mono-tokens">0</span>
+                </div>
+                
+                <div class="hud-title" style="margin-top: 1rem;">Progressive Disclosure Gain</div>
+                <div class="hud-row">
+                    <span>Context Window Reduction:</span>
+                    <span class="hud-value glow" id="hud-reduction-pct">0.00%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="hud-reduction-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleHud() {
+            const sidebar = document.getElementById('hud-sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        async function fetchMetrics() {
+            try {
+                const res = await fetch('/api/metrics');
+                const history = await res.json();
+                updateDashboard(history);
+            } catch (err) {
+                console.error("Error fetching metrics:", err);
+            }
+        }
+
+        function updateDashboard(history) {
+            if (!history || history.length === 0) return;
+
+            // Compute totals
+            let totalArbTokens = 0;
+            let totalMonoTokens = 0;
+            let totalCostSaved = 0;
+            let totalScoutTTFT = 0;
+            let piiCount = 0;
+            let hitlCount = 0;
+            let totalMcpCalls = 0;
+
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+
+            history.reverse().forEach(run => {
+                totalArbTokens += run.arbitrator_in_tokens + run.arbitrator_out_tokens;
+                totalMonoTokens += run.monolithic_in_tokens + run.monolithic_out_tokens;
+                totalCostSaved += run.cost_savings_usd || 0;
+                totalScoutTTFT += run.scout_latency || 0;
+                if (run.pii_detected) piiCount++;
+                if (run.hitl_escalated) hitlCount++;
+                totalMcpCalls += run.mcp_tool_calls || 0;
+
+                // Add to table
+                const tr = document.createElement('tr');
+                const date = new Date(run.timestamp * 1000).toLocaleTimeString();
+                
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${run.prompt}</td>
+                    <td><span class="badge ${run.scout_tag}">${run.scout_tag}</span></td>
+                    <td>${run.arbitrator_in_tokens} t</td>
+                    <td>${run.monolithic_in_tokens} t</td>
+                    <td>${run.total_latency.toFixed(2)}s</td>
+                    <td style="color: var(--accent-success); font-weight: bold;">$${(run.cost_savings_usd || 0).toFixed(5)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update stats cards
+            const savingsRate = totalMonoTokens > 0 ? ((totalMonoTokens - totalArbTokens) / totalMonoTokens) * 100 : 0;
+            document.getElementById('val-total-savings').innerText = savingsRate.toFixed(2) + '%';
+            document.getElementById('val-cost-savings').innerText = '$' + totalCostSaved.toFixed(5);
+            document.getElementById('val-avg-scout-ttft').innerText = (totalScoutTTFT / history.length).toFixed(2) + 's';
+            document.getElementById('val-pii-blocked').innerText = piiCount;
+            document.getElementById('val-hitl-escalations').innerText = hitlCount;
+            document.getElementById('val-mcp-calls').innerText = totalMcpCalls;
+
+            // Load last run into HUD
+            const last = history[0]; // history was reversed, so [0] is the latest
+            if (last) {
+                document.getElementById('hud-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';
+                document.getElementById('hud-exec-node').innerText = last.node_name.toUpperCase();
+                document.getElementById('hud-exec-latency').innerText = last.node_latency.toFixed(2) + 's';
+                document.getElementById('hud-total-latency').innerText = last.total_latency.toFixed(2) + 's';
+                document.getElementById('hud-pii-detected').innerText = last.pii_detected ? 'TRUE' : 'FALSE';
+                document.getElementById('hud-hitl-intercept').innerText = last.hitl_escalated ? 'TRUE' : 'FALSE';
+                
+                document.getElementById('hud-scout-tokens').innerText = last.scout_input_tokens;
+                document.getElementById('hud-exec-tokens').innerText = last.node_input_tokens;
+                document.getElementById('hud-arb-total-tokens').innerText = last.arbitrator_in_tokens;
+                document.getElementById('hud-mono-tokens').innerText = last.monolithic_in_tokens;
+
+                const diffPct = last.monolithic_in_tokens > 0 ? ((last.monolithic_in_tokens - last.arbitrator_in_tokens) / last.monolithic_in_tokens) * 100 : 0;
+                document.getElementById('hud-reduction-pct').innerText = diffPct.toFixed(2) + '%';
+                document.getElementById('hud-reduction-bar').style.width = diffPct.toFixed(0) + '%';
+            }
+        }
+
+        async function runPrompt() {
+            const promptInput = document.getElementById('prompt-input');
+            const term = document.getElementById('terminal-out');
+            const prompt = promptInput.value.trim ? promptInput.value.trim() : promptInput.value;
+            if (!prompt) return;
+
+            term.innerText = "Initializing connection to Capability Arbitrator...\\n";
+            promptInput.value = '';
+
+            try {
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                term.innerText = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\\n');
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.slice(6));
+                            if (data.type === 'content') {
+                                term.innerText += data.text;
+                            } else if (data.type === 'output') {
+                                term.innerText += "\\n\\n[Output Event]: " + data.text;
+                            } else if (data.type === 'error') {
+                                term.innerText += "\\n\\n[ERROR]: " + data.text;
+                            }
+                        }
+                    }
+                    term.scrollTop = term.scrollHeight;
+                }
+            } catch (err) {
+                term.innerText += "\\n\\n[Connection Error]: " + err.message;
+            }
+
+            // Reload metrics to update dashboard and HUD
+            setTimeout(fetchMetrics, 1000);
+        }
+
+        // Initial Load
+        fetchMetrics();
+    </script>
+</body>
+</html>
