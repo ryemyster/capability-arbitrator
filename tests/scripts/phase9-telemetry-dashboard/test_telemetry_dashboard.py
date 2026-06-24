@@ -27,7 +27,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from fastapi.testclient import TestClient
-from app.dashboard import app
+from app.fast_api_app import app
 
 def run_tests() -> bool:
     client = TestClient(app)
@@ -37,7 +37,7 @@ def run_tests() -> bool:
 
     # Test 1: HTML Serving
     try:
-        res = client.get("/")
+        res = client.get("/dashboard")
         if res.status_code == 200 and "Capability Arbitrator" in res.text:
             print("[PASS] Dashboard root endpoint serves HTML successfully.")
         else:

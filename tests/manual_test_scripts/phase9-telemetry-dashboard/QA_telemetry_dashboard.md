@@ -5,19 +5,19 @@ This document provides the manual QA steps to verify that the FastAPI-based Tele
 
 ## Prerequisites
 1. Ensure dependencies are installed: `uv sync`.
-2. Ensure you are on the `feature/issue-8-telemetry-dashboard` branch.
+2. Ensure you are on the `develop` branch.
 
 ## QA Execution Steps
 
-### 1. Launch the Dashboard Server
-Run the dashboard uvicorn server locally:
+### 1. Launch the Unified Server
+Run the FastAPI server locally:
 ```bash
-uv run python app/dashboard.py
+uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 ```
-*Expected Output:* The console prints: `🚀 Starting Capability Arbitrator Telemetry Dashboard on http://127.0.0.1:8000...`
+*Expected Output:* The console prints: `INFO:     Started server process [pid]` and `INFO:     Uvicorn running on http://127.0.0.1:8000`
 
 ### 2. Verify Initial Dashboard Layout
-1. Open your web browser and navigate to `http://127.0.0.1:8000`.
+1. Open your web browser and navigate to `http://127.0.0.1:8000/dashboard`.
 2. Verify that:
    - The header displays **Capability Arbitrator** with the subtitle **Outcome Governance & Live Telemetry Console**.
    - The **Cumulative Efficiency Gains** card displays initial values (e.g., token savings rate, cost savings, TTFT).

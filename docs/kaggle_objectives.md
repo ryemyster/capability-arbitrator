@@ -70,13 +70,13 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Successfully deployed to Agent Runtime or Cloud Run**
     *   *What:* Hosting the agent on Google Cloud so it is live.
-    *   *Citation:* *(Completed: Phase 5 [Remote Agent Runtime deployment] in [deployment_metadata.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/deployment_metadata.json))*
+    *   *Citation:* *(Completed: Phase 5 [Remote Cloud Run deployment configuration] in [agents-cli-manifest.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/agents-cli-manifest.yaml) and [docs/DEPLOYMENT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/DEPLOYMENT.md))*
 *   **[x] CI/CD Pipeline (GitHub Actions)**
     *   *What:* Automate testing and deployment using GitHub Actions workflows.
     *   *Citation:* *(Completed: Phase 4 [CI/CD via GitHub Actions] in [.github/workflows/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.github/workflows/))*
 *   **[x] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
-    *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/dashboard.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/dashboard.py))*
+    *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and [app/templates/index.html](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/templates/index.html))*
 *   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
     *   *What:* Automatically triggers agent runs in response to webhooks or messages.
 

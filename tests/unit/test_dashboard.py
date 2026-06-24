@@ -20,13 +20,13 @@ How it works: Uses FastAPI's TestClient to call endpoints and assert response co
 """
 
 from fastapi.testclient import TestClient
-from app.dashboard import app
+from app.fast_api_app import app
 
 client = TestClient(app)
 
 def test_dashboard_serve_root() -> None:
-    """Verifies that the root path serves the HTML template successfully."""
-    response = client.get("/")
+    """Verifies that the /dashboard path serves the HTML template successfully."""
+    response = client.get("/dashboard")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Capability Arbitrator" in response.text
