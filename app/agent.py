@@ -27,109 +27,34 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
+from typing import AsyncGenerator
+from app.app_utils.routing_utils import get_prompt_text
+from app.app_utils.math_utils import solve_math
+from app.app_utils.skill_utils import load_skill_instructions
 
-def get_prompt_text(ctx: Context) -> str:
-    """Helper to retrieve the original user prompt text from the context.
-    We need this because down-stream nodes like the math node only receive the route output by default.
-    """
-    if ctx.user_content and ctx.user_content.parts:
-        parts = []
-        for p in ctx.user_content.parts:
-            if hasattr(p, "text") and p.text:
-                parts.append(p.text)
-        return " ".join(parts)
-    return ""
-
-
-def solve_math(prompt: str) -> str:
-    """Safely extracts simple arithmetic from a string and evaluates it without using LLM tokens.
-    This fulfills the Kaggle rubric's requirement for deterministic optimization of non-cognitive tasks.
-    """
-    # Normalize words to basic operators so we can handle word problems easily
-    s = prompt.lower()
-    s = s.replace("multiplied by", "*")
-    s = s.replace("times", "*")
-    s = s.replace("divided by", "/")
-    s = s.replace("plus", "+")
-    s = s.replace("minus", "-")
-    # Strip commas from numbers (e.g. 2,500 -> 2500)
-    s = s.replace(",", "")
-
-    # Extract pattern of: number operator number
-    match = re.search(r"(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)", s)
-    if match:
-        num1 = float(match.group(1))
-        op = match.group(2)
-        num2 = float(match.group(3))
-
-        if op == "+":
-            res = num1 + num2
-        elif op == "-":
-            res = num1 - num2
-        elif op == "*":
-            res = num1 * num2
-        elif op == "/":
-            if num2 == 0:
-                return "Error: Division by zero."
-            res = num1 / num2
-        else:
-            return "Error: Unknown operator."
-
-        # Convert to int if it's a whole number
-        if res.is_integer():
-            return str(int(res))
-        return str(res)
-    return "Could not parse math expression."
-
-
-def load_researcher_instructions() -> str:
-    """Reads the researcher instructions from the local skill SKILL.md file and
-    dynamically appends the few-shot examples from few_shots.json at startup.
-    This ensures our system instruction always aligns dynamically with the academic SOP.
-    """
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    skill_dir = os.path.join(base_dir, "app", "skills", "researcher")
-
-    # Load system instructions from SKILL.md
-    instructions = ""
-    try:
-        with open(os.path.join(skill_dir, "SKILL.md"), encoding="utf-8") as f:
-            content = f.read()
-            if content.startswith("---"):
-                parts = content.split("---", 2)
-                if len(parts) >= 3:
-                    instructions = parts[2].strip()
-            else:
-                instructions = content.strip()
-    except Exception:
-        instructions = (
-            "You are the dedicated research node. Apply capability-researcher skill."
-        )
-
-    # Load few-shot examples from few_shots.json
-    try:
-        import json
-
-        with open(os.path.join(skill_dir, "few_shots.json"), encoding="utf-8") as f:
-            data = json.load(f)
-            examples = data.get("examples", [])
-            if examples:
-                instructions += "\n\n## Few-Shot Examples of Expected Output Format\n"
-                for idx, eg in enumerate(examples, 1):
-                    instructions += f"\n### Example {idx}\n**Input:** {eg['input']}\n**Output:**\n{eg['output']}\n"
-    except Exception:
-        # If few-shots fail to load, proceed with just instructions
-        pass
-
-    return instructions
-
-
+from functools import cached_property
 from google import genai
 from google.genai import types
+from google.adk.models.google_llm import Gemini
+from app.config import MODEL
+
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
+LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
+
+class GlobalGemini(Gemini):
+    @cached_property
+    def api_client(self) -> genai.Client:
+        return genai.Client(
+            vertexai=True,
+            project=PROJECT_ID,
+            location=LOCATION,
+        )
+
+global_model = GlobalGemini(model=MODEL)
 
 class ScoutOutput(BaseModel):
     capability_tag: Literal[
-        "coding", "research", "math", "document", "approval", "mcp"
+        "coding", "research", "math", "document", "approval", "mcp", "stride"
     ] = Field(description="The capability required to handle the user's prompt.")
 
 
@@ -142,13 +67,18 @@ async def llm_scout_fn(ctx: Context, node_input: Any) -> Event:
     if not prompt:
         prompt = str(node_input) if node_input else ""
 
-    client = genai.Client()
+    client = genai.Client(
+        vertexai=True,
+        project=PROJECT_ID,
+        location=LOCATION,
+    )
     response = await client.aio.models.generate_content(
-        model="gemini-3.5-flash",
+        model=MODEL,
         contents=prompt,
         config=types.GenerateContentConfig(
             system_instruction="""You are the 'Scout' node for a Capability Arbitrator agent.
 Your task is to analyze the user's request and ask 'What capability is required?' before assigning a resource.
+If the request is about auditing code security, threat modeling, security review, or identifying security vulnerabilities, route it to the 'stride' capability.
 Return the appropriate capability tag.
 """,
             response_mime_type="application/json",
@@ -171,7 +101,7 @@ Return the appropriate capability tag.
 llm_scout = FunctionNode(name="llm_scout", func=llm_scout_fn)
 
 
-def router_node(node_input: Any) -> Event:
+def router_node(ctx: Context, node_input: Any) -> Event:
     print(f"DEBUG router_node input type: {type(node_input)}, content: {node_input}")
     if isinstance(node_input, dict):
         tag = node_input.get("capability_tag", "approval")
@@ -180,22 +110,33 @@ def router_node(node_input: Any) -> Event:
     else:
         tag = str(node_input)
     print(f"DEBUG router_node routing to: {tag}")
-    return Event(output=node_input, route=tag)  # type: ignore
+    
+    prompt = get_prompt_text(ctx)
+    if not prompt:
+        prompt = str(node_input)
+        
+    return Event(output=prompt, route=tag)  # type: ignore
 
 
 router_fn = FunctionNode(name="router", func=router_node)
 
 
-async def math_node(ctx: Context, node_input: Any):
+async def math_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event, None]:
     print(f"DEBUG math_node input: {node_input}")
     prompt = get_prompt_text(ctx)
     print(f"DEBUG math_node prompt: {prompt}")
     result = solve_math(prompt)
     print(f"DEBUG math_node result: {result}")
+    yield Event(
+        content=types.Content(
+            role="model",
+            parts=[types.Part.from_text(text=f"Math execution completed: {result}")],
+        )
+    )
     yield Event(output={"result": f"Math execution completed: {result}"})
 
 
-async def approval_node(ctx: Context, node_input: Any):
+async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event | RequestInput, None]:
     # Retrieve the alert message if passed from the security screen
     alert_msg = str(node_input) if node_input else "High-risk routing."
 
@@ -216,8 +157,20 @@ async def approval_node(ctx: Context, node_input: Any):
 
     approved = ctx.resume_inputs.get("approval_req", "")
     if approved.lower() in ["y", "yes", "approve", "true"]:
+        yield Event(
+            content=types.Content(
+                role="model",
+                parts=[types.Part.from_text(text="Approval granted. Continuing...")],
+            )
+        )
         yield Event(output="Approval granted. Continuing...")
     else:
+        yield Event(
+            content=types.Content(
+                role="model",
+                parts=[types.Part.from_text(text="Approval denied. Halting workflow.")],
+            )
+        )
         yield Event(output="Approval denied. Halting workflow.")
 
 
@@ -226,15 +179,22 @@ approval_fn = FunctionNode(name="approval", func=approval_node)
 
 research_node = LlmAgent(
     name="research_node",
-    model="gemini-3.5-flash",
-    instruction=load_researcher_instructions(),
+    model=global_model,
+    instruction=load_skill_instructions("researcher"),
+)
+
+stride_node = LlmAgent(
+    name="stride_node",
+    model=global_model,
+    instruction=load_skill_instructions("stride"),
 )
 
 coding_node = LlmAgent(
     name="coding_node",
-    model="gemini-3.5-flash",
+    model=global_model,
     instruction="""You are the dedicated coding node. You handle codebase changes and file system operations using your tools.
 IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv', '.git', '.pytest_cache', '__pycache__', or '.google-agents-cli' directories. Always ignore these directories in your search.
+QUALITY RULE: Whenever you modify Python files in 'app/', you must run the quality verification checks using `uv run python scripts/agent_quality_check.py` and auto-correct any violations (e.g. line limits, DRY rules, missing type signatures, missing module header blocks) before completing your task.
 """,
     tools=[
         McpToolset(
@@ -250,7 +210,7 @@ IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv'
 
 mcp_node = LlmAgent(
     name="mcp_node",
-    model="gemini-3.5-flash",
+    model=global_model,
     instruction="""You are the dedicated MCP node. You connect to local filesystem data to answer questions.
 IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv', '.git', '.pytest_cache', '__pycache__', or '.google-agents-cli' directories. Always ignore these directories in your search.
 """,
@@ -268,7 +228,7 @@ IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv'
 
 
 @node
-def security_screen(node_input: str):
+def security_screen(node_input: str) -> Event:
     # Check for multiple PII/GDPR patterns (SSN, Email, Phone, Credit Card, IP)
     input_str = str(node_input)
     pii_patterns = {
@@ -305,6 +265,7 @@ root_workflow = Workflow(
         Edge(from_node=router_fn, to_node=research_node, route="research"),
         Edge(from_node=router_fn, to_node=coding_node, route="coding"),
         Edge(from_node=router_fn, to_node=mcp_node, route="mcp"),
+        Edge(from_node=router_fn, to_node=stride_node, route="stride"),
         Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE),
     ],
 )

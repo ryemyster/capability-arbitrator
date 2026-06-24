@@ -34,6 +34,11 @@ These constraints are mandatory and must be strictly followed for all operations
 - **Code preservation**: Only modify code directly targeted by the user's request. Preserve all surrounding code, config values, comments, and formatting.
 - **Model Integrity**: NEVER change the model unless explicitly asked. Fix `GOOGLE_CLOUD_LOCATION` (e.g., `global` instead of `us-east1`) for 404 errors, not the model name.
 - **ADK tool imports**: Import the tool instance, not the module (e.g., `from google.adk.tools.load_web_page import load_web_page`).
+- **AI Agent Coding Quality Rules**:
+  - Keep functions/nodes below 50 lines and files below 300 lines of executable code.
+  - Follow the DRY (Don't Repeat Yourself) principle. Do not duplicate loading or logic code (e.g. loader/prompt logic).
+  - Provide explicit python type annotations on all helper/utility functions.
+  - Provide a standard Header Block (Purpose, Why, How) on all newly created modules.
 
 ---
 

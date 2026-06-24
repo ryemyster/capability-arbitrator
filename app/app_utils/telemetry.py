@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+File: telemetry.py
+Purpose: Configures OpenTelemetry and Google GenAI telemetry hooks.
+Why it exists: Provides automated, unified logging and tracing to Google Cloud Storage and Google Cloud Logging.
+How it works: Detects environment variables and maps parameters to GenAI telemetry and OpenTelemetry resources.
+"""
+
 import logging
 import os
 

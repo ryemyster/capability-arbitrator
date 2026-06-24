@@ -12,6 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+File: typing.py
+Purpose: Defines Pydantic data schemas and feedback structures.
+Why it exists: Standardizes internal data models and logging telemetry records (like customer feedback).
+How it works: Subclasses Pydantic BaseModel to expose typed schemas with automatic UUID generation.
+"""
+
 import uuid
 from typing import (
     Literal,
