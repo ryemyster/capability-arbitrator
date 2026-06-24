@@ -1,9 +1,35 @@
 # Capability Arbitrator (Kaggle AI Agents Capstone)
 
-## 1. Overview
-The Capability Arbitrator is a "capability-first traffic controller" for AI agent ecosystems. Instead of loading every available tool into a single bloated agent, it dynamically decides whether a task should use a specific Model, an MCP server, an Agent Skill, deterministic code, or a Human-in-the-loop reviewer.
+> **Vision:** Today when AI developers and enterprise engineering teams want to build capable autonomous agents to solve complex workflows, they have to dump every conceivable tool, API, and procedural instruction into a single, massive system prompt for every request.
+> 
+> This is unacceptable because it causes **"Context Rot"** and **"Prompt Bloat,"** forcing the model to burn its expensive reasoning budget just parsing irrelevant instructions, which leads to high latency, hallucinations, and degraded decision-making.
+> 
+> We envision a world where managing an AI ecosystem is like a highly efficient traffic control system—a **"lean orchestration engine for AI"** where models only hold the exact knowledge they need in their active memory. We are bringing this world about through the **Capability Arbitrator**, an architecture that uses a high-speed Scout node to classify a user's intent first, and then uses **Progressive Disclosure** to dynamically load only the specific Agent Skills, MCP tools, deterministic scripts, or human reviewers required at the exact moment of execution.
+
+---
+
+## 1. The Capability-First Manifesto: The End of the "Everything Agent"
+
+For the past two years, the industry has been obsessed with building the ultimate "everything agent." We have treated LLMs like digital hoarders, dumping every conceivable tool, API, and instruction into a single, monolithic system prompt. The result is **Context Rot**: our agents are drowning in irrelevant data, burning their reasoning budgets just to parse their own bloated instructions, leading to high latency and degraded decision-making. 
+
+The era of the bloated, "everything agent" is dead. The next massive leap in AI is not a larger context window or a smarter foundation model—it is **infrastructure discipline**. 
+
+The **Capability Arbitrator** represents this radical paradigm shift. We are fundamentally changing the core question of agent orchestration. We must stop asking, *"Which model should answer this?"* and start asking, ***"What capability is required to solve this problem?"*** 
+
+This vision is built on three uncompromising pillars:
+
+1.  **Capability Before Implementation:** An agent's intent must be classified before a single heavy-duty tool is loaded. By deploying a high-speed, low-latency "Scout" node (like Gemini 3.5 Flash), we intercept the user's intent and assign a precise capability tag—be it math, deep research, or human approval. We separate the *understanding* of the task from the *execution* of the task.
+2.  **Radical Progressive Disclosure:** We must eradicate "Prompt Bloat." The Arbitrator embraces **Progressive Disclosure**, exposing the system to a lightweight menu of metadata and only loading the heavy procedural knowledge—a specific Agent Skill, a deterministic Python script, or an MCP server—at the exact moment it is triggered. 
+3.  **Preserving the Reasoning Budget:** By keeping the agent lean and strictly gating what enters the context window, we preserve the model's "cognitive overhead" entirely for solving the actual problem. We route deterministic tasks (like math) to deterministic code, and high-risk tasks to human-in-the-loop reviewers, ensuring that expensive LLM reasoning is only spent where it is actually needed.
+
+**The Vision:** We are moving from casual "vibe coding" into true **agentic engineering**. The Capability Arbitrator transforms fragile, isolated "custom machines" into a modular, highly interoperable traffic-control ecosystem. 
+
+We are no longer just building chatbots; we are orchestrating a lean, secure, and dynamic AI workforce where every resource—whether an LLM, a script, or a human—is deployed with surgical precision.
+
+---
 
 ## 2. Why It Exists (The Backpack Analogy)
+
 Imagine you are carrying a massive backpack filled with thick textbooks for every subject (Math, Coding, History, etc.). If a teacher asks you a simple math question, you don't dump every single textbook on your desk and try to read them all at once. That would be chaotic, slow, and you'd probably get confused.
 
 But that is exactly how most AI agents work today! They suffer from **"Prompt Bloat."** They try to load *every* tool and *every* instruction into their memory (the context window) all at once.
