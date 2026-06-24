@@ -22,6 +22,10 @@ These constraints are mandatory and must be strictly followed for all operations
 ### GitHub Interactions
 - **Mandatory MCP usage**: ALWAYS use the `github` MCP server for ALL GitHub interactions. Do not fall back to curl or other tools when interacting with GitHub; use the provided MCP tools.
 - **No Direct Remote Git Commands**: Prioritize remote interactions through the official `github` MCP server.
+- **Branching and PR Targets**:
+  - NEVER push directly to `main` or `master` unless explicitly instructed.
+  - ALWAYS branch off the `develop` branch for any development work.
+  - ALWAYS target the `develop` branch (never `main` or `master`) when creating Pull Requests, unless explicitly ordered otherwise by the user.
 
 ### Development Environment & Commands
 - **No GCP CLI Fallbacks**: NEVER use `gcloud` commands to configure projects, check quotas, or authenticate.

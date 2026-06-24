@@ -11,14 +11,14 @@ def get_prime_factors(n: int) -> list[int]:
     """
     Returns a list of prime factors of a given integer n.
     """
-    factors = []
-    d = 2
-    temp = n
+    factors: list[int] = []
+    d: int = 2
+    temp: int = n
     while d * d <= temp:
         while temp % d == 0:
             factors.append(d)
-            temp //= d
-        d += 1
+            temp = temp // d
+        d = d + 1
     if temp > 1:
         factors.append(temp)
     return factors
@@ -29,7 +29,7 @@ def solve_math(prompt: str) -> str:
     This fulfills the Kaggle rubric's requirement for deterministic optimization of non-cognitive tasks.
     """
     # Normalize words to basic operators so we can handle word problems easily
-    s = prompt.lower()
+    s: str = prompt.lower()
     s = s.replace("multiplied by", "*")
     s = s.replace("times", "*")
     s = s.replace("divided by", "/")
@@ -41,10 +41,11 @@ def solve_math(prompt: str) -> str:
     # Extract pattern of: number operator number
     match = re.search(r"(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)", s)
     if match:
-        num1 = float(match.group(1))
-        op = match.group(2)
-        num2 = float(match.group(3))
+        num1: float = float(match.group(1))
+        op: str = match.group(2)
+        num2: float = float(match.group(3))
 
+        res: float = 0.0
         if op == "+":
             res = num1 + num2
         elif op == "-":
@@ -66,5 +67,5 @@ def solve_math(prompt: str) -> str:
 
 
 if __name__ == "__main__":
-    number = 84
+    number: int = 84
     print(f"Prime factors of {number}: {get_prime_factors(number)}")
