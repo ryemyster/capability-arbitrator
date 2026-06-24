@@ -275,6 +275,7 @@
         .badge.research { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
         .badge.coding { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
         .badge.math { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge.devops { background: rgba(16, 185, 129, 0.15); color: #34d399; }
         .badge.stride { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
         .badge.approval { background: rgba(239, 68, 68, 0.2); color: #f87171; }
 
@@ -578,7 +579,7 @@
             let piiCount = 0;
             let hitlCount = 0;
             let totalMcpCalls = 0;
-            let mathCount = 0;
+            let devopsCount = 0;
 
             const tbody = document.getElementById('history-tbody');
             tbody.innerHTML = '';
@@ -591,7 +592,7 @@
                 if (run.pii_detected) piiCount++;
                 if (run.hitl_escalated) hitlCount++;
                 totalMcpCalls += run.mcp_tool_calls || 0;
-                if (run.scout_tag === 'math') mathCount++;
+                if (run.scout_tag === 'math' || run.scout_tag === 'devops') devopsCount++;
 
                 // Add to table
                 const tr = document.createElement('tr');
@@ -611,7 +612,7 @@
 
             // Update stats cards
             const savingsRate = totalMonoTokens > 0 ? ((totalMonoTokens - totalArbTokens) / totalMonoTokens) * 100 : 0;
-            const offloadRate = history.length > 0 ? (mathCount / history.length) * 100 : 0;
+            const offloadRate = history.length > 0 ? (devopsCount / history.length) * 100 : 0;
 
             document.getElementById('val-total-savings').innerText = savingsRate.toFixed(2) + '%';
             document.getElementById('val-cost-savings').innerText = '$' + totalCostSaved.toFixed(5);
@@ -649,15 +650,15 @@
                     document.getElementById('live-saved-tokens').innerText = last.token_savings.toLocaleString();
                     document.getElementById('live-reduction-rate').innerText = diffPct.toFixed(2) + '%';
                     
-                    const bloatVal = last.scout_tag === 'math' ? '0% (Deterministic Code Offload)' : '20% (1/5 active skills loaded)';
+                    const bloatVal = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? '0% (Deterministic Code Offload)' : '20% (1/5 active skills loaded)';
                     document.getElementById('live-tool-bloat').innerText = bloatVal;
                     
                     document.getElementById('live-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';
                     document.getElementById('live-task-duration').innerText = last.total_latency.toFixed(2) + 's';
                     
                     const offloadStatus = document.getElementById('live-offload-status');
-                    if (last.scout_tag === 'math') {
-                        offloadStatus.innerText = '100% Deterministic Python Offload';
+                    if (last.scout_tag === 'math' || last.scout_tag === 'devops') {
+                        offloadStatus.innerText = '100% Deterministic DevOps Offload';
                         offloadStatus.style.color = '#34d399';
                     } else {
                         offloadStatus.innerText = 'Dynamic Progressive Disclosure LLM';
@@ -666,13 +667,13 @@
 
                     // TSR calculation
                     const promptTokens = Math.max(10, Math.floor(last.prompt.length / 4));
-                    const activeSkillTokens = last.scout_tag === 'math' ? 0 : last.node_input_tokens;
+                    const activeSkillTokens = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? 0 : last.node_input_tokens;
                     const monoTsr = ((promptTokens + activeSkillTokens) / last.monolithic_in_tokens * 100);
-                    const arbTsr = last.scout_tag === 'math' ? 100 : ((promptTokens + activeSkillTokens) / last.arbitrator_in_tokens * 100);
+                    const arbTsr = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? 100 : ((promptTokens + activeSkillTokens) / last.arbitrator_in_tokens * 100);
                     
                     document.getElementById('mono-tsr-val').innerText = monoTsr.toFixed(1) + '%';
                     document.getElementById('arb-tsr-val').innerText = arbTsr.toFixed(1) + '%';
-                    document.getElementById('arb-bloat-val').innerText = last.scout_tag === 'math' ? '0% (No LLM tools loaded)' : '20% (Pruned 4/5 skills)';
+                    document.getElementById('arb-bloat-val').innerText = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? '0% (No LLM tools loaded)' : '20% (Pruned 4/5 skills)';
                 }
             }
         }

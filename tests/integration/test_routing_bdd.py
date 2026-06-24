@@ -82,11 +82,17 @@ def check_routing(test_context, tag):
     assert tag in routes
 
 
-@then(parsers.parse('the final response contains the math result "{expected}"'))
-def check_math_output(test_context, expected):
+@then("the final response contains a DevOps execution status")
+def check_devops_output(test_context):
     events = test_context["events"]
-    outputs = [str(e.output) for e in events if e.output is not None]
-    assert any(expected in out for out in outputs)
+    outputs = []
+    for e in events:
+        if e.output:
+            outputs.append(str(e.output))
+        if e.content and e.content.parts:
+            outputs.extend(part.text for part in e.content.parts if part.text)
+    combined = "\n".join(outputs)
+    assert any(x in combined for x in ["DevOps Engine", "STDOUT", "exit_code", "pytest", "verify_code.py"])
 
 
 @then("the agent yields an interrupt requesting human authorization")

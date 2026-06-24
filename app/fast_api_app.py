@@ -114,8 +114,8 @@ def get_trace_event(event: Any) -> list[str]:
         elif route == "approval":
             traces.append("🚨 Security Screen: PII or sensitive operation detected! Workflow routing escalated to approval.")
         elif route and route != "safe":
-            if route == "math":
-                traces.append("⚡ Deterministic Offloading: Routing to local Python solver (0 LLM tokens, 100% savings).")
+            if route == "devops":
+                traces.append("⚡ Deterministic Offloading: Routing to local DevOps engine (0 LLM tokens, 100% savings).")
             else:
                 traces.append(f"🚀 Execution Node: Routing task to the specialized {route.upper()} executor...")
 
@@ -123,8 +123,8 @@ def get_trace_event(event: Any) -> list[str]:
         tag = event.output["capability_tag"]
         traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}")
         traces.append(f"🔀 Router Node: Progressive disclosure triggered. Swapping out standard prompt and loading specialized instructions/tools for capability: {tag.upper()}")
-        if tag == "math":
-            traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic Python compiler.")
+        if tag == "devops":
+            traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic DevOps toolchain.")
         else:
             traces.append("Pruned 4 unused skills/tool sets to prevent context saturation and hallucinatory behavior.")
             
