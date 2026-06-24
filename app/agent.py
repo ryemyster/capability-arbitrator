@@ -112,7 +112,7 @@ async def devops_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event, No
     """DevOps execution node using pytest/subprocess verification."""
     prompt = get_prompt_text(ctx) or (str(node_input) if node_input else "")
     start_time = time.time()
-    cmd = ["uv", "run", "pytest"] if any(w in prompt.lower() for w in ["test", "pytest", "run tests"]) else ["uv", "run", "python", "verify_code.py"]
+    cmd = ["uv", "run", "pytest", "tests/unit"] if any(w in prompt.lower() for w in ["test", "pytest", "run tests"]) else ["uv", "run", "python", "verify_code.py"]
     desc = "Running automated pytest suite..." if "pytest" in cmd else "Running code quality checks..."
     
     yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=f"⚙️ DevOps Engine: {desc}\n")]))
@@ -217,6 +217,7 @@ root_workflow = Workflow(
         Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE),
     ],
 )
+root_agent = root_workflow
 app = App(
     root_agent=root_workflow,
     name="app",

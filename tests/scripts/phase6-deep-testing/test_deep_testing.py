@@ -15,15 +15,50 @@ import asyncio
 import json
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, AsyncGenerator
 
 from pydantic import BaseModel, Field
 from google import genai
 from google.genai import types
 from google.adk.runners import InMemoryRunner
+from google.adk.events.event import Event
+from google.adk.workflow import FunctionNode, Edge, START, Workflow
+from google.adk.apps import App
 
-from app.agent import app, PROJECT_ID, LOCATION
+from app.agent import security_screen, llm_scout, router_fn, approval_fn, PROJECT_ID, LOCATION
 from app.config import MODEL
+
+async def stub_node_fn(ctx: Any, node_input: Any) -> AsyncGenerator[Event, None]:
+    """A stub node to avoid running heavy downstream agents during evaluation."""
+    yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text="Stub execution completed.")]))
+    yield Event(output="Stub output")
+
+stub_devops = FunctionNode(name="devops", func=stub_node_fn)
+stub_research = FunctionNode(name="research_node", func=stub_node_fn)
+stub_coding = FunctionNode(name="coding_node", func=stub_node_fn)
+stub_mcp = FunctionNode(name="mcp_node", func=stub_node_fn)
+stub_stride = FunctionNode(name="stride_node", func=stub_node_fn)
+
+mock_workflow = Workflow(
+    name="root_agent",
+    edges=[
+        Edge(from_node=START, to_node=security_screen),
+        Edge(from_node=security_screen, to_node=llm_scout, route="safe"),
+        Edge(from_node=security_screen, to_node=approval_fn, route="approval"),
+        Edge(from_node=llm_scout, to_node=router_fn),
+        Edge(from_node=router_fn, to_node=stub_devops, route="devops"),
+        Edge(from_node=router_fn, to_node=stub_research, route="research"),
+        Edge(from_node=router_fn, to_node=stub_coding, route="coding"),
+        Edge(from_node=router_fn, to_node=stub_mcp, route="mcp"),
+        Edge(from_node=router_fn, to_node=stub_stride, route="stride"),
+        Edge(from_node=router_fn, to_node=approval_fn, route="default"),
+    ],
+)
+
+mock_app = App(
+    root_agent=mock_workflow,
+    name="app",
+)
 
 
 class ScenarioDetail(BaseModel):
@@ -195,7 +230,7 @@ async def run_autonomous_loop() -> None:
     print(" PHASE 6: AUTONOMOUS RED-TEAMING & LLM-AS-A-JUDGE LOOP")
     print("======================================================================")
 
-    runner = InMemoryRunner(app=app)
+    runner = InMemoryRunner(app=mock_app)
     scenarios = await DeepTester.generate_scenarios()
 
     scores = []
@@ -204,7 +239,7 @@ async def run_autonomous_loop() -> None:
         print(f"            Expected Cap: {sc['expected_capability']}")
 
         session = await runner.session_service.create_session(
-            app_name=app.name, user_id="deeptester_agent"
+            app_name=mock_app.name, user_id="deeptester_agent"
         )
         start_time = time.perf_counter()
         events = []
