@@ -1,0 +1,8 @@
+# Exclude local development directories from Cloud uploads
+.gcloudignore
+.git/
+.gitignore
+.venv/
+__pycache__/
+.pytest_cache/
+.google-agents-cli/

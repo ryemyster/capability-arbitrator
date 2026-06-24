@@ -12,4 +12,4 @@ create_params:
   include_data_ingestion: false
   
   datastore: "none"
-  agent_guidance_filename: "GEMINI.md"
+  agent_guidance_filename: ".agents/CONTEXT.md"

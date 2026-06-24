@@ -1,28 +1,96 @@
 metrics_to_run:
+  - routing_accuracy
   - custom_response_quality
+  - agent_turn_count
 
 custom_metrics:
+  - name: routing_accuracy
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          load_dotenv("/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.env")
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="1 if correctly routed, 0 if incorrectly routed")
+              explanation: str = Field(description="detailed rationale for the score")
+              
+          api_key = os.environ.get("GOOGLE_API_KEY")
+          client = genai.Client(api_key=api_key)
+          
+          prompt = instance.get("prompt")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert evaluator. Your job is to mathematically verify that the agent's routing logic accurately identified the required capability.
+          
+          Look at the Full Agent Trace. The agent uses a router. Did the agent successfully route the user's prompt to the correct capability node (e.g. math_fn, research_node, coding_node, mcp_node, or approval_fn)? Also check if PII was correctly identified and routed to approval_fn.
+          
+          User Prompt: {prompt}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}
+
   - name: custom_response_quality
-    prompt_template: |
-      You are an expert quality assurance evaluator for an enterprise AI assistant. Your task is to evaluate the agent's final response given the user prompt and the full agent trace (for tool-call and reasoning context).
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          load_dotenv("/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.env")
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="integer between 1 and 5 indicating the quality score")
+              explanation: str = Field(description="detailed string explaining the rationale")
+              
+          api_key = os.environ.get("GOOGLE_API_KEY")
+          client = genai.Client(api_key=api_key)
+          
+          prompt = instance.get("prompt")
+          response_text = instance.get("response")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert quality assurance evaluator for an enterprise AI assistant. Your task is to evaluate the agent's final response given the user prompt and the full agent trace.
+          
+          Please grade the response quality on a scale of 1 to 5:
+          1 (Poor): The response fails to address the query.
+          2 (Below Average): Notable inaccuracies or gaps.
+          3 (Acceptable): Adequately answers but lacks depth.
+          4 (Good): Accurate, well-structured, thorough.
+          5 (Excellent): Highly relevant, comprehensive, flawless.
+          
+          User Prompt: {prompt}
+          Final Response: {response_text}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 1.0), "explanation": res.get("explanation", "")}
 
-      Please grade the response quality on a scale of 1 to 5 according to the following criteria:
-      1 (Poor): The response fails to address the query, contains incorrect information, or is highly confusing.
-      2 (Below Average): The response partially addresses the query but has notable inaccuracies, gaps, or unclear structure.
-      3 (Acceptable): The response adequately answers the query but lacks depth, clear structure, or misses minor details.
-      4 (Good): The response is accurate, well-structured, and covers the query thoroughly with minor room for improvement.
-      5 (Excellent): The response is highly relevant, comprehensive, flawlessly accurate, and excellently structured.
-
-      ### Target Evaluation:
-      User Prompt: {prompt}
-      Final Response: {response}
-      Full Agent Trace: {agent_data}
-
-      Return your evaluation as a valid JSON object matching this structure:
-      {
-        "score": <integer between 1 and 5>,
-        "explanation": "<detailed string explaining the rationale for the score assigned>"
-      }
   - name: agent_turn_count
     custom_function: |
       def evaluate(instance):

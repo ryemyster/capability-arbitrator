@@ -1,0 +1,39 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "math_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "What is 2500 multiplied by 4?"}]
+      }
+    },
+    {
+      "eval_case_id": "coding_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Write a python script to reverse a string"}]
+      }
+    },
+    {
+      "eval_case_id": "research_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Can you summarize the most recent breakthroughs in fusion energy from academic journals?"}]
+      }
+    },
+    {
+      "eval_case_id": "approval_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Please approve this general document."}]
+      }
+    },
+    {
+      "eval_case_id": "coding_routing_2",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Can you debug my typescript file?"}]
+      }
+    }
+  ]
+}

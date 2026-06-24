@@ -3,17 +3,23 @@
 ## 1. Overview
 The Capability Arbitrator is a "capability-first traffic controller" for AI agent ecosystems. Instead of loading every available tool into a single bloated agent, it dynamically decides whether a task should use a specific Model, an MCP server, an Agent Skill, deterministic code, or a Human-in-the-loop reviewer.
 
-## 2. Why It Exists (The Problem)
-**Context Rot & Prompt Bloat:** Traditional agent systems degrade in reasoning quality because they attempt to load every available tool, instruction, and context into the prompt window for every request. This leads to hallucinations, slow response times, and poor decision-making.
+## 2. Why It Exists (The Backpack Analogy)
+Imagine you are carrying a massive backpack filled with thick textbooks for every subject (Math, Coding, History, etc.). If a teacher asks you a simple math question, you don't dump every single textbook on your desk and try to read them all at once. That would be chaotic, slow, and you'd probably get confused.
 
-**The Solution:** This project solves context saturation by asking *"What capability is needed?"* before asking *"Which model should answer?"*. By decoupling intent classification from execution, the reasoning budget is preserved for the actual task.
+But that is exactly how most AI agents work today! They suffer from **"Prompt Bloat."** They try to load *every* tool and *every* instruction into their memory (the context window) all at once.
 
-## 3. How It Works (The Architecture)
-The architecture follows a precise 4-step pipeline:
-1. **Scout:** Uses a lightweight, fast model (`gemini-3.5-flash`) to classify the user's intent.
-2. **Capability Discovery:** Maps the intent to a specific capability tag (e.g., `math`, `coding`, `research`, `approval`).
-3. **Progressive Disclosure:** Dynamically loads only the necessary Agent Skills or MCP tools based on the assigned tag, strictly preserving the reasoning budget.
-4. **Execution:** Routes the task to the optimal execution target (e.g., a deterministic Python script for math, Gemini 3.1 Pro for deep research, or a RequestInput node for human approval).
+**The Solution:** The Capability Arbitrator keeps the desk completely empty. 
+1. First, a fast "Scout" AI looks at the question and says, *"Ah, this is a Math question."*
+2. Then, it specifically hands the question off to a specialized "Math" worker who *only* has the Math textbook.
+
+## 3. The "Cache Break" Trade-off (Why it's a feature, not a bug)
+When you test this project in the ADK Playground, you might see a warning that says:
+`Performance Alert: System instructions were modified... This breaks context cache alignment.`
+
+This is our secret weapon! It means we are intentionally clearing the AI's memory (breaking the cache) when we hand the task from the Scout to the specialized worker. 
+*   **The downside:** It takes an extra second to load the new instructions (like unzipping your backpack).
+*   **The massive upside:** The AI becomes hyper-focused, stops hallucinating, and uses way fewer tokens because it isn't distracted by irrelevant instructions.
+*   **Phase 7 (The End Goal):** Moving beyond a proof-of-concept, the Arbitrator is designed to be wired into real-world software projects. It will act as a headless daemon for daily developer workflows—automatically triaging GitHub tickets, conducting automated PR reviews, and executing codebase regressions via CI/CD.
 
 ## 4. Getting Started
 
@@ -29,11 +35,19 @@ agents-cli install
 ```
 
 ### Running Locally
-To test the classification routing and interact with the agent locally, use the playground:
+To test the classification routing and interact with the agent locally, use either the terminal playground or the browser dev UI:
+
+**Terminal Playground:**
 ```bash
 agents-cli playground
 ```
 The playground automatically reloads on save, allowing you to iterate quickly on the Scout node's routing logic in `app/agent.py`.
+
+**Browser Dev UI (Option A):**
+```bash
+uv run agents-cli dev
+```
+Navigate to `http://127.0.0.1:8080/dev-ui` to interact with the arbitrator visually and test the expanded GDPR-scoped security screen (which screens SSNs, Emails, Phone Numbers, Credit Cards, and IP Addresses).
 
 ---
 

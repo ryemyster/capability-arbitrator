@@ -1,0 +1,12 @@
+{
+  "examples": [
+    {
+      "input": "Summarize the findings of quantum dot LED breakthroughs in 2025.",
+      "output": "# Executive Summary\nQuantum dot LEDs (QLEDs) achieved a breakthrough in external quantum efficiency (EQE) using a new cadmium-free colloidal formulation, raising efficiency levels from 18% to 24.5% [1]. This development marks a significant milestone toward heavy-metal-free consumer displays.\n\n# Methodology\nResearchers utilized high-resolution transient absorption spectroscopy to track charge carrier dynamics [2]. Synthesized ligand-passivated ZnSe/ZnS core-shell architectures were deployed in a standard device structure and evaluated over 10,000 continuous hours [3].\n\n# Findings\n- Cadmium-free emissions achieved exceptional purity with a full-width at half-maximum (FWHM) of under 20 nm [1].\n- Lifetime performance (T50) increased by 40% under high-density current conditions [3]."
+    },
+    {
+      "input": "Detail the methodology of the recent deep-sea hydrothermal vent temperature survey.",
+      "output": "# Executive Summary\nAn oceanographic expedition mapped hydrothermal venting anomalies in the Mariana Trench, identifying temperature excursions up to 380°C in diffuse flow zones [1].\n\n# Methodology\nDeployments of the Jason-class ROV utilized deep-sea conductivity-temperature-depth (CTD) sensor chains [2]. In-situ fluid samples were collected using specialized titanium gas-tight bottles [3]. Analysis of helium-3 isotopic ratios validated thermal plumes.\n\n# Findings\n- Thermal vents are highly concentrated within a 1.2-kilometer fault line zone [1].\n- Methane gas levels inside venting fluids indicate high microbiological activity [3]."
+    }
+  ]
+}

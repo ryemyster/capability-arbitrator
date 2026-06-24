@@ -24,6 +24,7 @@ locals {
     "logging.googleapis.com",
     "cloudtrace.googleapis.com",
     "telemetry.googleapis.com",
+    "agentregistry.googleapis.com",
   ]
 }
 
