@@ -86,5 +86,5 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 The following items are still required to achieve a gold-standard project submission:
 
 1.  **FastAPI Manager Dashboard & Stats for Nerds** - Tracked in [GitHub Issue #8](https://github.com/ryemyster/capability-arbitrator/issues/8)
-2.  **Pub/Sub Event Integration**
+2.  **Pub/Sub Event Integration** - Tracked in [GitHub Issue #26](https://github.com/ryemyster/capability-arbitrator/issues/26)
 
