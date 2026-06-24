@@ -8,13 +8,23 @@ How it works: Searches a skill's directory for SKILL.md and few_shots.json, form
 import json
 import os
 
-def load_skill_instructions(skill_name: str) -> str:
+def load_skill_instructions(skill_name: str, target_dir: str = None) -> str:
     """Reads the instructions from the local skill SKILL.md file and
     dynamically appends the few-shot examples from few_shots.json at startup.
     This ensures our system instruction always aligns dynamically with the skill definitions.
     """
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    skill_dir = os.path.join(base_dir, "app", "skills", skill_name)
+    if not target_dir:
+        target_dir = os.environ.get("ARBITRATOR_CWD", os.getcwd())
+
+    # Try local .agents/skills/<skill_name>
+    skill_dir = os.path.join(target_dir, ".agents", "skills", skill_name)
+    if not os.path.exists(skill_dir):
+        # Try local app/skills/<skill_name>
+        skill_dir = os.path.join(target_dir, "app", "skills", skill_name)
+    if not os.path.exists(skill_dir):
+        # Fallback to internal packaged skills
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        skill_dir = os.path.join(base_dir, "app", "skills", skill_name)
 
     # Load system instructions from SKILL.md
     instructions = ""

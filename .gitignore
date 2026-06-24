@@ -209,3 +209,5 @@ adk_debug.yaml
 
 # Telemetry database
 app/telemetry_db.json
+telemetry_db.json
+**/telemetry_db.json
