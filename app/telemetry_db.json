@@ -223,5 +223,30 @@
     "arbitrator_out_tokens": 208,
     "token_savings": 11828,
     "cost_savings_usd": 0.0008847
+  },
+  {
+    "timestamp": 1782305406.412857,
+    "prompt": "Hi!",
+    "pii_detected": false,
+    "pii_types": [],
+    "scout_tag": "research",
+    "scout_latency": 1.5941059589385986,
+    "scout_input_tokens": 172,
+    "scout_output_tokens": 8,
+    "node_name": "unknown",
+    "node_latency": 0.0,
+    "node_input_tokens": 1010,
+    "node_output_tokens": 200,
+    "mcp_tool_calls": 0,
+    "hitl_escalated": false,
+    "hitl_approved": false,
+    "hitl_latency": 0.0,
+    "total_latency": 2.8640620708465576,
+    "monolithic_in_tokens": 13010,
+    "monolithic_out_tokens": 200,
+    "arbitrator_in_tokens": 1182,
+    "arbitrator_out_tokens": 208,
+    "token_savings": 11828,
+    "cost_savings_usd": 0.0008847
   }
 ]
