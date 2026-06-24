@@ -76,7 +76,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* *(Completed: Phase 4 [CI/CD via GitHub Actions] in [.github/workflows/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.github/workflows/))*
 *   **[x] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
-    *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and [app/templates/index.html](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/templates/index.html))*
+    *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and [app/templates/index.html](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/templates/index.html)) -- Enhanced with dynamic token saturation tracking (TSR), tool bloat calculations, and verbose streaming traces matching the outcomes in [docs/OUTCOMES.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/OUTCOMES.md).*
 *   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
     *   *What:* Automatically triggers agent runs in response to webhooks or messages.
 
