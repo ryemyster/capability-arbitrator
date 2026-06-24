@@ -5,11 +5,11 @@
 # Updated: 2026-06-23T13:17:56-06:00
 
 Feature: Capability Arbitrator Routing
-  Scenario: Math prompt routing
+  Scenario: DevOps prompt routing
     Given the Capability Arbitrator is active
-    When the user inputs "What is 2500 multiplied by 4?"
-    Then the prompt is routed to the "math" capability
-    And the final response contains the math result "10000"
+    When the user inputs "Run the pytest suite to verify tests"
+    Then the prompt is routed to the "devops" capability
+    And the final response contains a DevOps execution status
 
   Scenario: Sensitive action approval routing
     Given the Capability Arbitrator is active

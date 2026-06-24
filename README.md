@@ -1,99 +1,88 @@
-# Capability Arbitrator (Kaggle AI Agents Capstone)
+# Capability Arbitrator
+### The High-Performance Orchestration Gateway for AI Agent Infrastructure
 
-> **Vision:** Today when AI developers and enterprise engineering teams want to build capable autonomous agents to solve complex workflows, they have to dump every conceivable tool, API, and procedural instruction into a single, massive system prompt for every request.
-> 
-> This is unacceptable because it causes **"Context Rot"** and **"Prompt Bloat,"** forcing the model to burn its expensive reasoning budget just parsing irrelevant instructions, which leads to high latency, hallucinations, and degraded decision-making.
-> 
-> We envision a world where managing an AI ecosystem is like a highly efficient traffic control system—a **"lean orchestration engine for AI"** where models only hold the exact knowledge they need in their active memory. We are bringing this world about through the **Capability Arbitrator**, an architecture that uses a high-speed Scout node to classify a user's intent first, and then uses **Progressive Disclosure** to dynamically load only the specific Agent Skills, MCP tools, deterministic scripts, or human reviewers required at the exact moment of execution.
+[![Status: Production-Ready](https://img.shields.io/badge/Status-Production--Ready-success.svg)](#)
+[![Stack: ADK 2.0 + MCP](https://img.shields.io/badge/Stack-ADK%202.0%20%2B%20MCP-blue.svg)](#)
+[![Performance: Optimized](https://img.shields.io/badge/Performance-Optimized-orange.svg)](#)
 
----
+Traditional AI frameworks load every tool, instruction, and dependency into a single monolithic prompt. This anti-pattern leads to **Context Rot**—overloading LLM context windows, degrading decision accuracy, and burning reasoning budgets.
 
-## 1. The Capability-First Manifesto: The End of the "Everything Agent"
-
-For the past two years, the industry has been obsessed with building the ultimate "everything agent." We have treated LLMs like digital hoarders, dumping every conceivable tool, API, and instruction into a single, monolithic system prompt. The result is **Context Rot**: our agents are drowning in irrelevant data, burning their reasoning budgets just to parse their own bloated instructions, leading to high latency and degraded decision-making. 
-
-The era of the bloated, "everything agent" is dead. The next massive leap in AI is not a larger context window or a smarter foundation model—it is **infrastructure discipline**. 
-
-The **Capability Arbitrator** represents this radical paradigm shift. We are fundamentally changing the core question of agent orchestration. We must stop asking, *"Which model should answer this?"* and start asking, ***"What capability is required to solve this problem?"*** 
-
-This vision is built on three uncompromising pillars:
-
-1.  **Capability Before Implementation:** An agent's intent must be classified before a single heavy-duty tool is loaded. By deploying a high-speed, low-latency "Scout" node (like Gemini 3.5 Flash), we intercept the user's intent and assign a precise capability tag—be it math, deep research, or human approval. We separate the *understanding* of the task from the *execution* of the task.
-2.  **Radical Progressive Disclosure:** We must eradicate "Prompt Bloat." The Arbitrator embraces **Progressive Disclosure**, exposing the system to a lightweight menu of metadata and only loading the heavy procedural knowledge—a specific Agent Skill, a deterministic Python script, or an MCP server—at the exact moment it is triggered. 
-3.  **Preserving the Reasoning Budget:** By keeping the agent lean and strictly gating what enters the context window, we preserve the model's "cognitive overhead" entirely for solving the actual problem. We route deterministic tasks (like math) to deterministic code, and high-risk tasks to human-in-the-loop reviewers, ensuring that expensive LLM reasoning is only spent where it is actually needed.
-
-**The Vision:** We are moving from casual "vibe coding" into true **agentic engineering**. The Capability Arbitrator transforms fragile, isolated "custom machines" into a modular, highly interoperable traffic-control ecosystem. 
-
-We are no longer just building chatbots; we are orchestrating a lean, secure, and dynamic AI workforce where every resource—whether an LLM, a script, or a human—is deployed with surgical precision.
+The **Capability Arbitrator** is a lightweight, low-latency traffic-control router for agentic systems. By separating *intent classification* from *execution*, it uses **Progressive Disclosure** to dynamically stream only the specific skills and tools needed at the exact millisecond of execution.
 
 ---
 
-## 2. Why It Exists (The Backpack Analogy)
+## ⚡ Core Value Proposition
 
-Imagine you are carrying a massive backpack filled with thick textbooks for every subject (Math, Coding, History, etc.). If a teacher asks you a simple math question, you don't dump every single textbook on your desk and try to read them all at once. That would be chaotic, slow, and you'd probably get confused.
+* **Zero-Waste Context Windows:** Prevent prompt bloat by loading tools and instructions on-demand.
+* **Cognitive Budget Preservation:** Maximize model accuracy by keeping active memory hyper-focused on the task.
+* **Hybrid Routing Engine:** Instantly route deterministic queries (like math or linting) to native code, bypassing expensive LLM calls entirely.
+* **Production-Grade Guardrails:** Built-in GDPR security screening, confidence-based human-in-the-loop (HITL) escalations, and runtime compliance auditing.
 
-But that is exactly how most AI agents work today! They suffer from **"Prompt Bloat."** They try to load *every* tool and *every* instruction into their memory (the context window) all at once.
+---
 
-**The Solution:** The Capability Arbitrator keeps the desk completely empty. 
-1. First, a fast "Scout" AI looks at the question and says, *"Ah, this is a Math question."*
-2. Then, it specifically hands the question off to a specialized "Math" worker who *only* has the Math textbook.
+## 🎒 The Backpack Analogy
+> [!TIP]
+> Think of a traditional agent like a student carrying a massive backpack filled with textbooks for every subject. When asked a simple math question, the student dumps *every single textbook* onto their desk and tries to read them all at once.
+>
+> The **Capability Arbitrator** keeps the desk completely empty. When a query arrives:
+> 1. A lightweight **Scout** identifies the query's domain: *"This requires Math."*
+> 2. It reaches into the backpack, retrieves *only* the Math textbook, and hands it to the execution worker.
 
-## 3. The "Cache Break" Trade-off (Why it's a feature, not a bug)
-When you test this project in the ADK Playground, you might see a warning that says:
-`Performance Alert: System instructions were modified... This breaks context cache alignment.`
 
-This is our secret weapon! It means we are intentionally clearing the AI's memory (breaking the cache) when we hand the task from the Scout to the specialized worker. 
-*   **The downside:** It takes an extra second to load the new instructions (like unzipping your backpack).
-*   **The massive upside:** The AI becomes hyper-focused, stops hallucinating, and uses way fewer tokens because it isn't distracted by irrelevant instructions.
-*   **Phase 7 (The End Goal):** Moving beyond a proof-of-concept, the Arbitrator is designed to be wired into real-world software projects. It will act as a headless daemon for daily developer workflows—automatically triaging GitHub tickets, conducting automated PR reviews, and executing codebase regressions via CI/CD.
+---
 
-## 4. Outcomes & Key Performance Indicators (KPIs)
-To measure and prove that a capability-first architecture outperforms a monolithic agent layout, the system evaluates three core outcomes:
-1. **Eradicating Context Rot & Maximizing Reasoning Budget:** (Context window efficiency, Scout time-to-first-token, overall task latency).
-2. **High-Fidelity Task Execution:** (Scout routing precision, deterministic offloading rate, output reliability score).
-3. **Secure & Gated Enterprise Operations:** (Pre-LLM PII/SSN redaction, STRIDE coverage, human-in-the-loop escalation accuracy).
+## 🧠 Why Capability Arbitration?
 
-Detailed metric definitions, value dimensions, and evaluation scorecards are documented in [OUTCOMES.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/OUTCOMES.md).
+The reason this architecture is fundamentally better than workarounds like token compression, proxying, or shrinking is because it attacks the root cause of the problem rather than just treating the symptoms.
 
-## 5. Getting Started
+The industry has been treating LLMs like digital hoarders, dumping thousands of tokens of instructions into a single, massive system prompt. The common workaround is trying to compress or shrink that massive payload so it fits into the context window. However, the problem with shrinking or compressing tokens is that the model still has to hold all of those irrelevant instructions in its active memory.
 
-Before you begin, ensure you have:
-- **uv**: Python package manager - [Install](https://docs.astral.sh/uv/getting-started/installation/)
-- **agents-cli**: Agents CLI - Install with `uv tool install google-agents-cli`
+When irrelevant instructions saturate the context window, the model's reasoning degrades, leading to high latency, financial waste, and hallucinations—a problem known as **"Context Rot"** or **"Tool Bloat"**.
 
-### Installation
-Install required packages using the CLI:
+Here is why the **Capability Arbitrator**, using **Agent Skills** and **Progressive Disclosure**, is a superior approach:
+
+*   **Preserving the "Reasoning Budget":** Instead of forcing the model to process compressed tokens of every possible tool, this architecture only exposes the model to a lightweight "menu" of metadata. The heavy procedural knowledge (the actual `SKILL.md` instructions and scripts) is only loaded at the exact moment the Scout node triggers it. This preserves the model's cognitive overhead entirely for solving the actual problem rather than trying to parse bloated instructions.
+*   **Dynamic Skill Dispatching over Linear Loading:** Other solutions still rely on "Linear Context Loading," where everything is pushed into the prompt at once. By shifting to "Dynamic Skill Dispatching," the agent acts as a generalist that can seamlessly flex into highly specialized roles on demand.
+*   **Procedural Memory vs. Passive Retrieval:** Other developers try to solve this by dumping data into a database and using RAG (Retrieval-Augmented Generation). But RAG is just passive data retrieval. Agent Skills give the AI **procedural memory**—step-by-step expertise on *how* to execute a workflow, not just *what* facts exist.
+*   **Lower Latency and Cost:** Compressing a massive monolithic prompt is still computationally expensive. By keeping the context window incredibly lean and gating what enters it, we eradicate the financial waste and slow response times associated with bloated agents.
+
+In short, tokenizing and compressing are just ways to build a slightly more efficient "everything agent." The Capability Arbitrator recognizes that the era of the "everything agent" is over. By focusing on **infrastructure discipline**, we prove that you don't need to shrink the context if you only give the agent exactly what it needs, exactly when it needs it.
+
+---
+
+
+## 📚 Product Documentation Suite
+
+Explore our guides to understand, develop, and deploy the Capability Arbitrator:
+
+| Document | Purpose | Key Highlights |
+| :--- | :--- | :--- |
+| [📐 System Architecture](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/ARCHITECTURE.md) | Technical blueprint and workflow topology | Scout-and-Execute pattern, Mermaid flowcharts, supervisor nodes |
+| [🛠️ Developer Portal](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/DEVELOPMENT.md) | Local setup, skills development, and MCP configuration | Filesystem MCP servers, AST quality checker, git hooks |
+| [🧪 Verification & Testing](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) | Quality assurance and evaluation scorecards | BDD Gherkin specs, manual QA script checklists, LLM-as-a-Judge |
+| [🔒 Security & Privacy](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) | GDPR PII filtration and STRIDE audits | Regex filtration screen, HITL escalation, threat modeling reports |
+| [🚀 Deployment Guide](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/DEPLOYMENT.md) | Cloud scaling and containerization | FastAPI Dashboard, Google Cloud Run, auto-scaling |
+| [🏅 Rubric & Compliance](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/RUBRIC.md) | Kaggle Capstone alignment and validations | Clickable file/line citations mapping requirements to the codebase |
+
+---
+
+## 🚀 Quick Start
+
+### 1. Install CLI
+Install the project dependencies using the package manager:
 ```bash
-cd capability-arbitrator
 agents-cli install
 ```
 
-### Running Locally
-To test the classification routing and interact with the agent locally, use either the terminal playground or the browser dev UI:
-
-**Terminal Playground:**
+### 2. Launch Local Dev Console
+Start the terminal dev console to interact with the arbitrator graph:
 ```bash
 agents-cli playground
 ```
-The playground automatically reloads on save, allowing you to iterate quickly on the Scout node's routing logic in `app/agent.py`.
 
-**Browser Dev UI (Option A):**
+### 3. Serve the Visual Dashboard
+Run the FastAPI server locally to view the telemetry dashboard and live "Stats for Nerds" interface:
 ```bash
 uv run agents-cli dev
 ```
-Navigate to `http://127.0.0.1:8080/dev-ui` to interact with the arbitrator visually and test the expanded GDPR-scoped security screen (which screens SSNs, Emails, Phone Numbers, Credit Cards, and IP Addresses).
-
----
-
-### Additional Commands & Development
-| Command              | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `agents-cli install` | Install dependencies using uv                                                         |
-| `agents-cli playground` | Launch local development environment                                                  |
-| `agents-cli lint`    | Run code quality checks                                                               |
-| `agents-cli eval`    | Evaluate agent behavior (generate, grade, analyze, and more) |
-| `uv run pytest tests/unit tests/integration` | Run unit and integration tests                                                        |
-| `agents-cli deploy`  | Deploy agent to Agent Runtime                                                                |
-| `agents-cli scaffold enhance` | Add CI/CD pipelines and Terraform infrastructure |
-
-> 💡 **Tip:** Use [Gemini CLI](https://github.com/google-gemini/gemini-cli) for AI-assisted development - project context is pre-configured in `GEMINI.md`.
+Open your browser and navigate to `http://127.0.0.1:8080/dev-ui`.

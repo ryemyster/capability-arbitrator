@@ -19,4 +19,4 @@ Verify that the `DeepTester` red-team agent and `OutcomeJudge` LLM-as-a-judge su
 - [ ] Test loop completes automatically and produces score metrics.
 
 ---
-*Created: 2026-06-23T13:17:56-06:00*
+*Created: 2026-06-24T11:38:38-06:00*

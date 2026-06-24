@@ -58,7 +58,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* Completed in [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) and resolved in [tests/integration/test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py).
 *   **[x] Provides an Evaluation Scorecard**
     *   *What:* An autonomous validation system that generates traces and evaluates routing outcomes.
-    *   *Citation:* Completed via BDD test outcomes and verified in [tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py).
+    *   *Citation:* Completed via BDD test outcomes and verified in [tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py). *(Completed: Phase 6 [Autonomous Red-Teaming & LLM-as-a-Judge Loop] in [tests/scripts/phase6-deep-testing/test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py))*
 *   **[x] Expanded Unit Tests**
     *   *What:* Additional developer-written tests targeting critical utility functions.
     *   *Citation:* Completed in [tests/unit/test_arbitrator.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py).

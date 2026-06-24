@@ -1,34 +1,49 @@
-# The Master Rubric for a "Gold-Standard" Submission
+# Compliance & Rubric Alignment Guide
+### Mapping System Implementations to Kaggle Capstone Criteria
 
-Use this checklist to ensure you have covered the high-leverage technical points.
+This guide maps each technical requirement from the Kaggle Capstone rubric to its exact implementation in the Capability Arbitrator codebase.
 
-## Requirements & Best Practices
+---
 
-### Architecture (ADK)
-- [x] Uses ADK 2.0 Graph (Workflow) with clearly defined nodes and edges.
-- [x] Implements conditional branching (e.g., routing based on intent).
-- [x] Includes a Human-in-the-Loop (HITL) node for high-risk actions.
+## 🧭 Evaluation & Compliance Matrix
 
-### Specialization (Skills)
-- [x] Features at least one custom Agent Skill in `.agents/skills/`.
-- [x] Skill utilizes Progressive Disclosure (loads only when relevant).
-- [x] Includes few-shot examples or a script in the skill folder.
+Our compliance requirements are categorized into four execution layers:
 
-### Interoperability (MCP)
-- [x] Connects to at least one MCP Server (Local or Remote).
-- [x] Agent uses MCP tools to ground responses in real-time data.
+| Layer | Requirement | Implementation Strategy | Code Citation |
+| :--- | :--- | :--- | :--- |
+| **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L205-219](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L205-219) |
+| | Conditional Branching | Dynamic routing by classification | [app/agent.py:L98-109](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L98-109) |
+| | Security Screen | GDPR PII regex redactor | [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
+| | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) |
+| | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150) |
+| **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) |
+| | BDD Verification | Gherkin integration routing | [test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py) |
+| | Pytest Suite | Unit/Integration testing | [tests/unit/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/) |
+| **Runtime Evals** | Scorecard Evals | LLM-as-a-Judge evaluations | [test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py) |
+| | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
+| **Dev & Dashboard** | Telemetry HUD | Dashboard UI & visual metrics | [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) |
+| | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L157-164](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L157-164) |
+| | Few-Shot Examples | In-context skill exemplars | [researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json) |
 
-### Security & Safety
-- [x] Implements a Security Screen (PII redaction or injection defense).
-- [x] Uses a Persistent Context file (`CONTEXT.md`) for guardrails.
-- [x] (Optional) Implements a STRIDE Threat Modeling skill.
+---
 
-### Quality & Eval
-- [x] Uses Gherkin syntax for behavior-driven specifications.
-- [x] Provides evidence of an Evaluation Scorecard (LLM-as-judge).
-- [x] Code passes Automated Linting (`agents-cli lint`).
+## 📂 Implementation Details & Verification
 
-### Deployment
-- [x] Successfully deployed to Agent Runtime or Cloud Run.
-- [ ] (Optional) Uses a FastAPI Manager Dashboard for the frontend.
-- [ ] Uses Pub/Sub for event-driven "Ambient" triggers.
+### 1. Production Runtime Guardrails
+*   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L59-94](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L59-94)).
+*   **Security Gating:** The `security_screen` intercepts the prompt first to redact credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides routing and escalates directly to human approval.
+*   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150)).
+
+### 2. CI/CD Staging Gates
+*   **Automated Quality Auditor:** Running `agent_quality_check.py` parses modified files to block commits that violate function lengths (>50 lines), module documentation, typing rules, or duplicate prompts.
+*   **Gherkin BDD specs:** Our behavior-driven specifications map natural-language routing requirements in [features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) to code validations.
+
+### 3. Offline Evaluation & Scoring
+*   **LLM-as-a-Judge scorecard:** Dynamic red-teaming tasks generated by `DeepTester` are run against `mock_app` and graded by `OutcomeJudge` to report Token Saturation (TSR) and Cost reduction efficiency (CpE) ([test_deep_testing.py:L192-256](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py#L192-256)).
+
+---
+
+## 🔒 Security & Privacy Notice
+
+> [!CAUTION]
+> **Secret Redaction Compliance:** Do not commit `.env` configuration files to version control. The pre-commit quality gate checks the workspace and will reject commits containing raw credentials or plain-text secrets.

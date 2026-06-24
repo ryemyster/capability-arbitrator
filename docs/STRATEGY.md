@@ -1,32 +1,60 @@
-# Capability Arbitrator - Strategy Overview
+# Product Strategy & Technical Vision
+### Decoupling Agent Intelligence from Execution Infrastructure
 
-## 1. The Core Innovation: "Capability Before Implementation"
-The project shifts the fundamental question from "Which model should answer?" to "What capability is required to solve this problem?". The true "whitespace" in the current open-source landscape isn't model selection, but Capability Resolution—deciding whether a task needs a Model, an MCP server, a specialized Skill, a deterministic script, or a Human-in-the-Loop.
+This document outlines the strategic decisions, architectural milestones, and alignment patterns behind the Capability Arbitrator.
 
-## 2. Solving the "Context Rot" Crisis (The Backpack Analogy)
-Think of an AI agent like a student carrying a giant backpack full of textbooks. If the teacher asks a simple math question, a traditional AI dumps *every single textbook* onto the desk (loading all instructions and tools into the prompt). This is called "Prompt Bloat." It overwhelms the AI, causes hallucinations, and costs a lot of tokens.
+---
 
-By using **Progressive Disclosure**, this project keeps the desk empty. The Scout node identifies the subject ("Math"), and *only* pulls out the Math textbook. 
+## ⚡ 1. The Core Innovation: "Capability Resolution"
 
-When you do this, the system breaks the "Context Cache" (clearing the desk). While breaking the cache causes a tiny delay (unzipping the backpack), it guarantees the specialized node is hyper-focused on exactly the right instructions.
+Most agentic orchestrators ask: *"Which LLM model should answer this prompt?"* 
 
-## 3. The "Scout and Execute" Workflow
-A high-efficiency pipeline using ADK 2.0 Graph primitives:
-- **The Scout:** Uses Gemini 3.5 Flash for low-latency classification of the required capability.
-- **The Registry:** A mapping layer that links capability tags (e.g., math, research) to specific execution targets.
-- **Dynamic Routing:** Utilizing conditional edges to route the flow. For example, "math" goes to a deterministic script, while "research" goes to an isolated agent loaded with deep research instructions.
+The Capability Arbitrator shifts the focus to: ***"What capability is required to solve this problem?"***
 
-## 4. The Value Proposition
-Focus on demonstrating measurable benefits rather than just architectural theory. Compare a "Naive Agent" (loading 15+ skills and hitting 250k tokens) against the "Capability Arbitrator" (loading 3 skills and using only 42k tokens). This proves that the approach optimizes the "reasoning budget," making the agent faster, cheaper, and more accurate.
+The true whitespace in modern AI architecture is not model size or raw intelligence, but **Capability Resolution**—the ability to decide at runtime whether a task is best solved by a Model, an external API, an MCP tool, a deterministic script, or a human administrator.
 
-## 5. Alignment with Previous Projects
-This architecture is the culmination of a pattern built across several projects:
-- **Context Engine:** The focus on retrieving only what is absolutely necessary.
-- **Check-in:** Prioritizing capability identification before choosing an implementation.
-- **Signal HoriZon:** Applying systems thinking to agentic infrastructure.
-- **ADK Intensive:** Mastering the Skills + Workflows + MCP stack to package this pattern into a portable, production-grade container.
+---
 
-## 6. Development & Deployment Phases
-- **Phases 1-5 (Scaffolding & Proof of Concept):** Prioritize using the native ADK Web Interface (e.g., via the Agent Runtime or Playground) to visually interact with the graph, verify routing logic, and securely handle Human-in-the-Loop (HITL) pause/resume events.
-- **Phase 6 (Real-World Deep Testing):** We will build a node that uses the Antigravity Python SDK to programmatically spawn an IDE subagent, scan a local codebase, or trigger a local file system edit. This proves that our Capability Arbitrator can securely orchestrate actual developer tools within the IDE rather than just hallucinating text!
-- **Phase 7 (Normal Daily Use & Production Integration):** We transition the Arbitrator from a "cool proof-of-concept" into an actual daily driver. This involves wiring it up to a real-world software project via CI/CD pipelines, mapping everyday developer workflows (e.g., automated PR reviews, ticket triage, and regression testing) to specific capability tags, and deploying it as a headless daemon that runs continuously alongside human developers.
+## ⚡ 2. Progressive Disclosure vs. Prompt Bloat
+
+Traditional agents load all instructions and tools at startup. This causes **Prompt Bloat**, leading to high latency and cognitive degradation. 
+
+By applying **Progressive Disclosure**, we load a fast classification Scout node (`gemini-3.5-flash`) to identify the required capability. We then break the context cache, clear the model's memory, and load *only* the specific tools and rules needed for that task.
+
+### The "Cache Break" Trade-Off
+* **The Downside:** Clearing the context cache causes a minor latency delay (sub-second) as the model loads new specialized instructions.
+* **The Upside:** The model operates with absolute precision, avoiding hallucinations and utilizing a fraction of the token budget compared to monolithic architectures.
+
+---
+
+## ⚡ 3. Strategic Roadmap & Milestones
+
+The project is structured into three primary architectural stages:
+
+```
+┌──────────────────────────────────────┐
+│  Phase 1-5: Scaffolding & Playground │ <-- Visual validation of routing and HITL
+└──────────────────┬───────────────────┘
+                   │
+┌──────────────────▼───────────────────┐
+│  Phase 6: Red-Teaming & Deep Testing  │ <-- Dynamic scorecards and outcome judges
+└──────────────────┬───────────────────┘
+                   │
+┌──────────────────▼───────────────────┐
+│  Phase 7: Headless Production Daemon  │ <-- CI/CD integrations and auto-triage
+└──────────────────────────────────────┘
+```
+
+### Milestone Breakdown:
+1. **Milestone A (Scaffolding & Playground):** Visual graph debugging and human-in-the-loop pause/resume validation using the ADK Dev UI.
+2. **Milestone B (Red-Teaming & Testing):** Running programmatically simulated developer prompts and grading outcomes using an LLM-as-a-Judge.
+3. **Milestone C (Production Integration):** Deploying the arbitrator as a background daemon wired directly to GitHub repositories to triage issues, review PRs, and run tests automatically.
+
+---
+
+## ⚡ 4. Alignment with Systems Engineering
+
+This architecture is the culmination of systems-thinking principles applied to AI orchestration:
+* **Context Engine:** Retrieve only the information necessary for the immediate query.
+* **Progressive Loadouts:** Defer loading heavy resources until explicitly required.
+* **Budget Governance:** Strictly monitor and control compute, token, and latency overhead at runtime.
