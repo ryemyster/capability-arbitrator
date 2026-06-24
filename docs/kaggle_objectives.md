@@ -71,6 +71,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 *   **[x] Successfully deployed to Agent Runtime or Cloud Run**
     *   *What:* Hosting the agent on Google Cloud so it is live.
     *   *Citation:* *(Completed: Phase 5 [Remote Agent Runtime deployment] in [deployment_metadata.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/deployment_metadata.json))*
+*   **[x] CI/CD Pipeline (GitHub Actions)**
+    *   *What:* Automate testing and deployment using GitHub Actions workflows.
+    *   *Citation:* *(Completed: Phase 4 [CI/CD via GitHub Actions] in [.github/workflows/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.github/workflows/))*
 *   **[ ] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
 *   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
