@@ -43,6 +43,7 @@ These constraints are mandatory and must be strictly followed for all operations
   - Follow the DRY (Don't Repeat Yourself) principle. Do not duplicate loading or logic code (e.g. loader/prompt logic).
   - Provide explicit python type annotations on all helper/utility functions.
   - Provide a standard Header Block (Purpose, Why, How) on all newly created modules.
+- **Documentation Synchronization**: Whenever modifying Gherkin feature files, test runner hooks/mocks (e.g. `conftest.py`), or dynamic custom capabilities/nodes (`app/agent.py`), you MUST update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit to keep specifications and active tracker outcomes synchronized.
 
 ---
 

@@ -34,6 +34,7 @@ These constraints are mandatory and must be strictly followed for all operations
 - **Code preservation**: Only modify code directly targeted by the user's request. Preserve all surrounding code, config values, comments, and formatting.
 - **Model Integrity**: NEVER change the model unless explicitly asked. Fix `GOOGLE_CLOUD_LOCATION` (e.g., `global` instead of `us-east1`) for 404 errors, not the model name.
 - **ADK tool imports**: Import the tool instance, not the module (e.g., `from google.adk.tools.load_web_page import load_web_page`).
+- **Documentation Synchronization**: Whenever modifying Gherkin feature files, test runner hooks/mocks (e.g. `conftest.py`), or dynamic custom capabilities/nodes (`app/agent.py`), you MUST update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit to keep specifications and active tracker outcomes synchronized.
 
 ---
 

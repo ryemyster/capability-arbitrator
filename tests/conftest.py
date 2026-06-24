@@ -181,6 +181,12 @@ class MockCredentials:
     def refresh(self, request: any) -> None:
         pass
 
+    def before_request(self, request: any, method: str, url: str, headers: any) -> None:
+        pass
+
+    def __getattr__(self, name: str) -> any:
+        return None
+
 def mock_default(*args: any, **kwargs: any) -> tuple[MockCredentials, str]:
     return MockCredentials(), "mock-project-id"
 
