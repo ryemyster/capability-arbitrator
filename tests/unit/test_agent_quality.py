@@ -29,3 +29,12 @@ def test_app_code_quality() -> None:
         f"❌ {path}:\n" + "\n".join(f"  - {e}" for e in errs)
         for path, errs in all_errors.items()
     )
+
+
+def test_git_branch_safety() -> None:
+    """Verifies that the current branch is not main/master, and that develop is an ancestor of the current branch."""
+    from scripts.git_guard import main as run_git_guard
+    try:
+        run_git_guard()
+    except SystemExit as e:
+        assert e.code == 0, "Git branch safety verification failed."

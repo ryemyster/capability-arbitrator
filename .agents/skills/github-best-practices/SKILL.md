@@ -16,7 +16,7 @@ Whenever you interact with GitHub (reading issues, pushing code, opening Pull Re
 
 ## 2. GitHub Engineering Best Practices
 When performing repository operations, you must follow these standards:
-- **Branching:** Never push directly to `main` or `master` unless explicitly ordered to by the user. Always create a feature branch (`feature/description` or `fix/description`).
+- **Branching:** Never push directly to `main` or `master` unless explicitly ordered to by the user. Always branch off `develop` when starting new features or fixes, and target `develop` (never `main` or `master`) when creating Pull Requests.
 - **Atomic Commits:** Do not bundle massive, unrelated changes into a single commit. Commit logically separated changes with clear, descriptive commit messages.
 - **Pull Requests:** Every PR must have a detailed description explaining **Why** the change was made, **What** the change does, and **How** it was tested (borrowing from our Documentation 15-Year-Old Rule).
 - **Issue Tracking:** Before starting a major new feature or Phase, check if an Issue exists. If not, consider creating one to track the work. When opening a PR, link it to the relevant Issue (e.g., `Closes #42`).
