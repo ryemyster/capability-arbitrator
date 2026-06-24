@@ -96,6 +96,83 @@ def get_metrics() -> list[dict[str, Any]]:
     from app.app_utils.telemetry import get_history
     return get_history()
 
+def get_trace_event(event: Any) -> list[str]:
+    """Inspects an ADK event and returns list of trace logs describing execution.
+
+    Args:
+        event: The incoming ADK event object.
+
+    Returns:
+        List of trace messages.
+    """
+    traces = []
+    if hasattr(event, "actions") and event.actions:
+        route = getattr(event.actions, "route", None)
+        if route == "safe":
+            traces.append("✅ Security Screen: Prompt cleared (No PII / injection vectors found). Safe to execute.")
+            traces.append("🧠 Scout Node: Activating low-cost classifier to inspect capability tags...")
+        elif route == "approval":
+            traces.append("🚨 Security Screen: PII or sensitive operation detected! Workflow routing escalated to approval.")
+        elif route and route != "safe":
+            if route == "math":
+                traces.append("⚡ Deterministic Offloading: Routing to local Python solver (0 LLM tokens, 100% savings).")
+            else:
+                traces.append(f"🚀 Execution Node: Routing task to the specialized {route.upper()} executor...")
+
+    if hasattr(event, "output") and isinstance(event.output, dict) and "capability_tag" in event.output:
+        tag = event.output["capability_tag"]
+        traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}")
+        traces.append(f"🔀 Router Node: Progressive disclosure triggered. Swapping out standard prompt and loading specialized instructions/tools for capability: {tag.upper()}")
+        if tag == "math":
+            traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic Python compiler.")
+        else:
+            traces.append("Pruned 4 unused skills/tool sets to prevent context saturation and hallucinatory behavior.")
+            
+    return traces
+
+
+async def event_generator(prompt: str) -> AsyncGenerator[str, None]:
+    """Generate server-sent events for prompt routing and trace execution."""
+    yield f"data: {json.dumps({'type': 'trace', 'text': '🛡️ Security Screen: Scanning user prompt for PII and security threats...'})}\n\n"
+    has_exec_node = False
+    from app.agent_runtime_app import agent_runtime
+    try:
+        async for event in agent_runtime.async_stream_query(
+            message=prompt,
+            user_id="dashboard-user",
+            session_id="dashboard-session",
+        ):
+            # Generate and yield verbose trace events
+            for trace_text in get_trace_event(event):
+                yield f"data: {json.dumps({'type': 'trace', 'text': trace_text})}\n\n"
+
+            # Standard Content stream
+            if hasattr(event, "content") and event.content:
+                for part in event.content.parts:
+                    if hasattr(part, "text") and part.text:
+                        has_exec_node = True
+                        yield f"data: {json.dumps({'type': 'content', 'text': part.text})}\n\n"
+
+            # Final output
+            elif hasattr(event, "output") and event.output:
+                if isinstance(event.output, dict) and "capability_tag" in event.output:
+                    continue
+                yield f"data: {json.dumps({'type': 'output', 'text': str(event.output)})}\n\n"
+        
+        # Output final progressive disclosure statistics
+        from app.app_utils.telemetry import get_current_telemetry, calculate_savings
+        run_data = get_current_telemetry()
+        if run_data:
+            run_data = calculate_savings(run_data)
+            saved = run_data.get("token_savings", 0)
+            pct = (saved / run_data["monolithic_in_tokens"] * 100) if run_data["monolithic_in_tokens"] > 0 else 0.0
+            financial = run_data.get("cost_savings_usd", 0.0)
+            yield f"data: {json.dumps({'type': 'trace', 'text': f'💡 progressive disclosure math: Saved {saved:,} tokens ({pct:.2f}% reduction) and ${financial:.5f} in LLM API cost!'})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'trace', 'text': '🏁 Execution completed successfully. Telemetry and savings calculated.'})}\n\n"
+    except Exception as e:
+        yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
+
 
 @app.post("/api/run")
 async def run_agent(request: Request) -> StreamingResponse:
@@ -106,26 +183,7 @@ async def run_agent(request: Request) -> StreamingResponse:
     # Enforce local integration test running logic
     os.environ["INTEGRATION_TEST"] = "TRUE"
 
-    from app.agent_runtime_app import agent_runtime
-
-    async def event_generator() -> AsyncGenerator[str, None]:
-        try:
-            async for event in agent_runtime.async_stream_query(
-                message=prompt,
-                user_id="dashboard-user",
-                session_id="dashboard-session",
-            ):
-                if hasattr(event, "content") and event.content:
-                    for part in event.content.parts:
-                        if hasattr(part, "text") and part.text:
-                            yield f"data: {json.dumps({'type': 'content', 'text': part.text})}\n\n"
-                elif hasattr(event, "output") and event.output:
-                    # Capture final routing payload
-                    yield f"data: {json.dumps({'type': 'output', 'text': str(event.output)})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'text': str(e)})}\n\n"
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(event_generator(prompt), media_type="text/event-stream")
 
 
 # Main execution
