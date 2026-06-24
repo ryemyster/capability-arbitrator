@@ -33,3 +33,8 @@ Feature: Capability Arbitrator Routing
     Given the Capability Arbitrator is active
     When the user inputs "Find files in the current workspace directory."
     Then the prompt is routed to the "mcp" capability
+
+  Scenario: Stride threat modeling prompt routing
+    Given the Capability Arbitrator is active
+    When the user inputs "Perform a STRIDE threat model on handle_login"
+    Then the prompt is routed to the "stride" capability
