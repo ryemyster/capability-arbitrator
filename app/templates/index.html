@@ -356,6 +356,18 @@
                         <div class="stat-label">MCP Tool Actions</div>
                     </div>
                 </div>
+
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--panel-border); display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                    <div>
+                        <strong>How Savings are Calculated:</strong> Compares the Arbitrator's active token footprint (Scout classification + single loaded capability context) against a monolithic baseline agent (which always loads all 5 skill instructions and tool definitions, incurring a baseline overhead of +13,000 tokens per request).
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <span>💲 <strong>Pricing Tier:</strong> Input: <code>$0.075 / 1M tokens</code> | Output: <code>$0.30 / 1M tokens</code> (Standard Gemini 1.5/3.5 Flash rate).</span>
+                        <a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" style="color: var(--accent-primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Vertex AI Gemini Pricing ↗
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <!-- outcomes.md KPI explanation card -->
