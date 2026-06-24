@@ -1,40 +1,44 @@
-# Development Guide: Setting Up and Developing Local Workflows
+# Developer Portal
+### Setting Up, Developing, and Configuring Local Workflows
 
-This document explains how to set up, build, and run the Capability Arbitrator on your local machine.
-
----
-
-## 1. Why: The Problem & The Vision
-* **The Problem:** Setting up multi-agent projects often requires configuring complex environments, registering third-party tools, and running manual lint checks. Without a clear developer workflow, developer speed slows down, and code quality degrades.
-* **The Solution:** We implement a standard development environment utilizing the Antigravity `agents-cli` toolset, automated Git hook checks, and pre-configured Model Context Protocol (MCP) integrations to streamline local feature building and testing.
+Welcome to the Capability Arbitrator developer guide. This document outlines the local environment configuration, tool integration patterns, and code quality controls required to build features.
 
 ---
 
-## 2. What: Key Components
+## 🛠️ Environment Prerequisites
 
-Our developer ecosystem consists of three main parts:
-1. **Model Context Protocol (MCP) Servers:** Provides sub-agents with direct access to local development resources (like the filesystem) in a standardized manner.
-2. **Automated Quality Hooks:** Pre-push and pre-commit checks that run code-quality analysis (`agent_quality_check.py`) and pytest suites.
-3. **Agent Skills:** Reusable procedural knowledge bases (located in `.agents/skills/`) that are progressively loaded into sub-agents when triggered.
+Before starting, ensure you have the following installed on your machine:
+* **Python Runtime:** Python 3.12 or newer.
+* **Package Manager:** [uv](https://docs.astral.sh/uv/) for lightning-fast package syncing.
+* **Orchestration CLI:** `google-agents-cli` (installed via `uv tool install google-agents-cli`).
 
 ---
 
-## 3. How: Step-by-Step Developer Setup
+## 🚀 Installation & Setup
 
-### Step A: Prerequisites & Installation
-Ensure you have [uv](https://docs.astral.sh/uv/) installed. Then run the installation hook to set up the virtual environment and install all packages:
-```bash
-# Clone the repository and navigate inside
-cd capability-arbitrator
+1. **Clone the Codebase & Install Dependencies:**
+   ```bash
+   cd capability-arbitrator
+   agents-cli install
+   ```
 
-# Install dependencies and sync virtual env
-agents-cli install
-```
+2. **Verify Environment Configuration:**
+   Copy the sample environment variables file and configure your credentials:
+   ```bash
+   cp .env.example .env
+   ```
 
-### Step B: Working with Model Context Protocol (MCP)
-We utilize the `@modelcontextprotocol/server-filesystem` server to allow the `coding_node` and `mcp_node` to interact with our local directory structure safely.
+> [!CAUTION]
+> **Secret Zero-Trust:** Never commit `.env` files or hardcode API keys. The local quality checking engine scans files for exposed credentials.
 
-In [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py), the MCP server is initialized dynamically:
+---
+
+## 🔌 Model Context Protocol (MCP) Integration
+
+The Capability Arbitrator utilizes MCP to standardise how sub-agents access system resources. By default, it exposes a local filesystem MCP toolset to the `coding_node` and `mcp_node`.
+
+### Filesystem MCP Setup
+In [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py), the toolset is registered via standard node stdio transports:
 ```python
 filesystem_mcp = McpToolset(
     connection_params=StdioConnectionParams(
@@ -45,14 +49,20 @@ filesystem_mcp = McpToolset(
     ),
 )
 ```
-* **Security Guardrail:** The system is explicitly configured to prevent sub-agents from executing recursive directory scans (like `directory_tree` on `.`) to save token costs and prevent context-window crashes.
 
-### Step C: Developing with Agent Skills
-Agent Skills reside under the `.agents/skills/` directory. Each skill consists of:
-* `SKILL.md`: Main instructions with YAML frontmatter defining name and description.
-* Supporting resource scripts or examples.
+> [!WARNING]
+> **Recursive Tree Protection:** To prevent context overload, sub-agents are strictly forbidden from running recursive file tree structures (`directory_tree` on `.`). Direct sub-agents to use `list_directory` or `search_files` instead.
 
-To load a skill's instructions dynamically in Python, use the `load_skill_instructions` utility:
+---
+
+## 🧠 Developing with Agent Skills
+
+Specialized agent workflows are encapsulated as **Skills** under the `.agents/skills/` directory. Each skill must contain:
+1. `SKILL.md`: Markdown instructions containing standard YAML frontmatter (`name` and `description`).
+2. Optional supporting code examples, prompt templates, or testing scripts.
+
+### Loading Skills Dynamically
+Skills are progressively disclosed (loaded into memory only when targeted by the router) using our loader utilities:
 ```python
 from app.app_utils.skill_utils import load_skill_instructions
 
@@ -63,30 +73,33 @@ research_node = LlmAgent(
 )
 ```
 
-### Step D: Verifying Code Quality via Git Hooks
-We enforce strict quality standards before any code is committed or pushed. The pre-push hook runs the quality checker located at [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py).
+---
 
-This quality checker ensures:
-* **Function Limits:** No node or helper function exceeds 50 lines.
-* **File Limits:** No executable Python file exceeds 300 lines.
-* **DRY Rule:** No duplicate prompt or loader logic.
-* **Typing:** Explicit type signatures on all helper and node functions.
-* **Documentation:** Standard header block (Purpose, Why, How) on all modules.
+## 🛡️ Git Quality Gates & Verification
 
-To run the checks manually:
+We enforce strict codebase formatting and structural constraints via pre-commit and pre-push hooks. 
+
+### Automated AST Quality Auditor
+The local auditor [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) parses modifications before they are pushed, enforcing:
+* **Function Limits:** No node or helper function may exceed 50 lines.
+* **File Limits:** No executable Python file may exceed 300 lines.
+* **Typing:** Explicit type signatures are required on all helper functions.
+* **Documentation:** A standard header block detailing `Purpose`, `Why`, and `How` is required on all modules.
+
+To execute the code quality scan manually:
 ```bash
 uv run python scripts/agent_quality_check.py
 ```
 
 ---
 
-## 4. Useful Developer Commands
+## 💻 Developer Command Reference
 
-| Command | Why Use It | How to Run |
-|---|---|---|
-| **Install Dependencies** | Set up virtual environment and sync libraries | `agents-cli install` |
-| **Interactive Playground** | Test agent routing and responses in terminal | `agents-cli playground` |
-| **Browser Dev UI** | Test visual traces, dashboard metrics, and security screen | `uv run agents-cli dev` |
-| **Run Unit/Integration Tests** | Execute pytest suite locally | `uv run pytest` |
-| **Lint & Quality Checks** | Run AST quality checker | `uv run python scripts/agent_quality_check.py` |
-| **Deploy to GCP** | Package and deploy FastAPI dashboard to Cloud Run | `agents-cli deploy` |
+| Action | Command | Purpose |
+| :--- | :--- | :--- |
+| **Sync Packages** | `agents-cli install` | Syncs the virtual environment using `uv` |
+| **Local Shell** | `agents-cli playground` | Interactive REPL playground to test routing |
+| **FastAPI server** | `uv run agents-cli dev` | Launches FastAPI server and visual telemetry dashboard |
+| **Verify Unit Tests** | `uv run pytest` | Executes standard pytest verification checks |
+| **Check Quality** | `uv run python scripts/agent_quality_check.py` | Runs AST linting rules |
+| **Cloud Deploy** | `agents-cli deploy` | Deploys the service container to Google Cloud Run |

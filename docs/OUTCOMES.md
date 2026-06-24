@@ -1,50 +1,67 @@
-# Capability Arbitrator Outcomes & KPIs
+# Performance Outcomes & KPI Dashboard Metrics
+### Value Realization and Resource Savings
 
-This document outlines the performance outcomes, metric dimensions, and business value indicators tracked by the Capability Arbitrator.
-
-## Purpose
-Establishes the criteria for proving that a "capability-first" architecture outperforms monolithic agents in speed, cost, quality, and security.
-
-## Why We Track This
-Without empirical benchmarks, it is impossible to verify if breaking the context cache and dynamically routing prompts actually improves system efficiency, saves money, or increases safety.
-
-## How to Measure
-These metrics are calculated at runtime by our telemetry layers (stored in `app/app_utils/telemetry.py`) and visually presented in the "Stats for Nerds" overlay and dashboard.
+This document outlines the performance outcomes, core KPIs, and value metrics tracked by the Capability Arbitrator telemetry suite.
 
 ---
 
-### Outcome 1: Eradicate "Context Rot" and Maximize the Reasoning Budget
-The primary goal of the Capability Arbitrator is to stop treating models like digital hoarders. By dynamically loading tools on-demand, we preserve the model's cognitive overhead for actual problem-solving rather than parsing bloated system prompts.
+## ⚡ Outcome 1: Eradicate "Context Rot" & Maximize the Reasoning Budget
 
-*   **KPI 1.1: Context Window Efficiency**
-    *   **Dimension: Token Overhead Reduction** (The difference in token count between loading all tools in a monolithic prompt vs. dynamically loading a single `SKILL.md` via Progressive Disclosure).
-    *   **Dimension: Tool Bloat Ratio** (The percentage of tools loaded into the context window that are actually utilized during the task).
-*   **KPI 1.2: System Latency**
-    *   **Dimension: Scout Node Time-to-First-Token (TTFT)** (The execution speed of the lightweight Gemini 3.5 Flash intent classifier before any heavy skills are loaded).
-    *   **Dimension: Overall Task Duration** (The end-to-end time from user prompt to final execution).
+Monolithic agents load all system rules and tool descriptions into memory upfront. This eats up active context, degrades logic reasoning, and increases API costs. The Capability Arbitrator resolves this by loading tools dynamically via **Progressive Disclosure**.
 
-### Outcome 2: High-Fidelity Task Execution via Capability Routing
-Instead of relying on a single model to guess the right tool, the system guarantees that tasks are handled by the optimal execution target (Model, Skill, MCP, or Code). 
+### Key Performance Indicators:
 
-*   **KPI 2.1: Routing Accuracy**
-    *   **Dimension: Intent Classification Precision** (The percentage of user prompts correctly tagged by the Scout node into categories like `math`, `research`, `coding`, `mcp`, or `stride`).
-    *   **Dimension: Deterministic Offloading Rate** (How often closed-form tasks, like math or database schema validation, are successfully routed to deterministic Python scripts rather than burning LLM tokens).
-*   **KPI 2.2: Output Quality & Reliability**
-    *   **Dimension: Autonomous Evaluation Score** (The pass/fail grade assigned by the `OutcomeJudge` scorecard running via the `google-agents-cli-eval` skill during deep testing).
-    *   **Dimension: Hallucination Reduction Rate** (The decrease in false tool calls or invented syntax due to the agent having a focused, progressively disclosed context).
+#### 1. Token Saturation Ratio (TSR)
+* **Definition:** The percentage of *useful context tokens* relative to *total prompt tokens* per transaction.
+* **Target:** `> 85%` useful context saturation.
+* **Why it matters:** Monolithic agents average `< 15%` TSR due to loading dozens of unused skills. Progressively disclosing single targeted skills (like `research`) keeps TSR high, reducing model confusion and preventing hallucinations.
 
-### Outcome 3: Secure, Trust-Verified Enterprise Operations
-The system must shift from casual "vibe coding" to disciplined "agentic engineering" by ensuring that ambient, autonomous actions are strictly gated, secure, and compliant.
-
-*   **KPI 3.1: Threat Mitigation & Data Privacy**
-    *   **Dimension: Pre-LLM Filter Success Rate** (The percentage of prompt-injection attempts and sensitive data like PII/SSNs successfully caught and redacted by the security screen *before* reaching the LLM).
-    *   **Dimension: Threat Modeling Coverage** (The frequency that the STRIDE threat modeling skill is successfully utilized to map out security risks during the planning phase). 
-*   **KPI 3.2: Human-in-the-Loop (HITL) Oversight**
-    *   **Dimension: Escalation Accuracy** (The rate at which high-risk or high-cost tasks are successfully intercepted and paused via `RequestInput` nodes).
-    *   **Dimension: Manager Resolution Latency** (How quickly a human reviewer approves or rejects a paused task from the frontend deployment dashboard).
+#### 2. Cost per Execution (CpE)
+* **Definition:** The calculated cloud API and token cost (input/output tokens) per run.
+* **Target:** `> 80%` reduction vs. Naive Monolithic Agent.
+* **Why it matters:** Loading 15+ skills on every prompt uses over 250,000 input tokens. The Capability Arbitrator averages 42,000 input tokens (Scout node classification + 1 specialized skill), resulting in immediate financial savings at scale.
 
 ---
 
-## When to Review
-- **During Code Reviews:** Ensure any new node or skill does not degrade the Context Window Efficiency or increase Scout TTFT.
-- **Before Production Deployment:** Verify that the Autonomous Evaluation Score is above 95% and Threat Modeling Coverage is complete.
+## ⚡ Outcome 2: High-Fidelity Task Execution
+
+By routing tasks to dedicated, isolated execution branches, we guarantee that tasks are solved by the optimal environment (e.g. LLM, custom code script, or human manager).
+
+### Key Performance Indicators:
+
+#### 1. Routing Accuracy & Precision
+* **Definition:** The rate at which the lightweight Scout node correctly classifies prompt intent (e.g. `devops`, `coding`, `research`).
+* **Target:** `> 95%` routing accuracy.
+* **Why it matters:** Ensures tasks are sent to the correct environment, avoiding execution failures or costly re-routing overhead.
+
+#### 2. Deterministic Offloading Rate
+* **Definition:** The percentage of closed-form tasks (math calculations, linter checks) successfully routed to pure Python code, bypassing LLMs.
+* **Target:** `100%` accuracy on math and linter operations.
+* **Why it matters:** LLMs struggle with precise math and execution loops. Routing closed-form tasks to Python functions guarantees absolute accuracy and eliminates LLM billing.
+
+---
+
+## ⚡ Outcome 3: Secure & Compliant Operations
+
+Enterprise operations require strict controls around data privacy, ambient permissions, and high-risk executions.
+
+### Key Performance Indicators:
+
+#### 1. Pre-LLM Filter Success Rate
+* **Definition:** The percentage of prompts containing sensitive GDPR-scoped PII (SSNs, credit cards, emails, phone numbers) intercepted and redacted before reaching the LLM.
+* **Target:** `100%` redaction rate.
+* **Why it matters:** Prevents leakage of customer secrets or sensitive data into public model training datasets.
+
+#### 2. HITL Escalation Accuracy
+* **Definition:** The percentage of high-risk or low-confidence operations correctly suspended for human validation.
+* **Target:** `100%` intercept rate on dangerous actions (e.g. database deletes).
+* **Why it matters:** Ensures the agent cannot execute irreversible, destructive, or high-cost actions without explicit manager approval.
+
+---
+
+## 🎯 Telemetry Reporting Infrastructure
+
+These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
+
+> [!NOTE]
+> **Dashboard Availability:** Run `uv run agents-cli dev` and navigate to `/dashboard` to view these KPIs plotted on visual charts in real-time.

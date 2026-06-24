@@ -1,77 +1,49 @@
-# Kaggle Rubric Alignment & Codebase Citation Guide
+# Compliance & Rubric Alignment Guide
+### Mapping System Implementations to Kaggle Capstone Criteria
 
-This document lists the master rubric requirements for our Kaggle AI Agents Capstone submission, explains how they are met, and provides clickable file and line citations.
-
----
-
-## 1. Runtime Guardrails (Production Execution)
-
-These guardrails govern the live, production path of the agent, ensuring execution safety and intent classification accuracy.
-
-### 📐 Uses ADK 2.0 Graph (Workflow)
-* **What:** The orchestrator is built as a workflow topology of nodes and edges rather than a script.
-* **Citation:** Defined in [app/agent.py:L205-219](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L205-219) via `root_workflow`.
-
-### 🔀 Conditional Branching
-* **What:** Dynamic routing of the user's prompt based on classifications.
-* **Citation:** Configured via `router_node` in [app/agent.py:L98-109](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L98-109) and the conditional edges in [app/agent.py:L212-217](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L212-217).
-
-### 🔒 Security Screen
-* **What:** Pre-LLM filter scanning for GDPR-scoped PII (SSNs, emails, credit cards, phone numbers, IP addresses).
-* **Citation:** Implemented in [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204) and verified by [tests/unit/test_arbitrator.py:L55-84](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py#L55-84).
-
-### 📖 Persistent Context file (`CONTEXT.md`)
-* **What:** System-wide prompt rules enforced via ADK configurations.
-* **Citation:** Configured in [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) and registered in [agents-cli-manifest.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/agents-cli-manifest.yaml).
-
-### 🚨 Human-in-the-Loop (HITL) Node
-* **What:** Pause-and-resume workflow gate for dangerous commands or low-confidence routing.
-* **Citation:** Implemented via `RequestInput` in [app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150).
+This guide maps each technical requirement from the Kaggle Capstone rubric to its exact implementation in the Capability Arbitrator codebase.
 
 ---
 
-## 2. CI/CD Checks (Build & Push Gates)
+## 🧭 Evaluation & Compliance Matrix
 
-These validation scripts are executed locally and via GitHub Actions to block regressions during development.
+Our compliance requirements are categorized into four execution layers:
 
-### 🤖 Code Quality Checks (Linting)
-* **What:** Automated checking for function length, file length, explicit type signatures, and DRY compliance.
-* **Citation:** Checked by [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) during pre-push git hooks.
-
-### 🥒 BDD Gherkin Testing
-* **What:** Plain-English behavior specs mapping the user experience.
-* **Citation:** Scenarios defined in [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) and implemented in [tests/integration/test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py).
-
-### 🧪 Unit & Integration Testing
-* **What:** Assertions for individual code helper files.
-* **Citation:** Located in [tests/unit/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/) and [tests/integration/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/).
-
----
-
-## 3. Runtime Evaluation (Validation Scorecard)
-
-Offline validation tools utilized to run dynamic scorecards against the routing agent.
-
-### 📊 LLM-as-a-Judge Scorecard
-* **What:** Autonomous scorecard grading metrics like Token Saturation Rate (TSR) and Cost reduction efficiency (CpE) using dynamic scenarios.
-* **Citation:** Implemented in [tests/scripts/phase6-deep-testing/test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py).
-
-### 🛡️ STRIDE Threat Modeling Skill
-* **What:** Progressively disclosed security model used to audit architecture for security threats.
-* **Citation:** Located in [app/skills/stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md) and bound to `stride_node` in [app/agent.py:L155](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L155).
+| Layer | Requirement | Implementation Strategy | Code Citation |
+| :--- | :--- | :--- | :--- |
+| **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L205-219](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L205-219) |
+| | Conditional Branching | Dynamic routing by classification | [app/agent.py:L98-109](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L98-109) |
+| | Security Screen | GDPR PII regex redactor | [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204) |
+| | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) |
+| | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150) |
+| **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) |
+| | BDD Verification | Gherkin integration routing | [test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py) |
+| | Pytest Suite | Unit/Integration testing | [tests/unit/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/) |
+| **Runtime Evals** | Scorecard Evals | LLM-as-a-Judge evaluations | [test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py) |
+| | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md) |
+| **Dev & Dashboard** | Telemetry HUD | Dashboard UI & visual metrics | [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) |
+| | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L157-164](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L157-164) |
+| | Few-Shot Examples | In-context skill exemplars | [researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json) |
 
 ---
 
-## 4. Development & Dashboard (Monitoring)
+## 📂 Implementation Details & Verification
 
-### 📈 FastAPI Telemetry Dashboard
-* **What:** Graphical web UI displaying active cost and latency charts, plus a task review interface.
-* **Citation:** Implemented in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and served locally or via Google Cloud Run at `/dashboard`.
+### 1. Production Runtime Guardrails
+*   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L59-94](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L59-94)).
+*   **Security Gating:** The `security_screen` intercepts the prompt first to redact credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides routing and escalates directly to human approval.
+*   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150)).
 
-### 🔌 Model Context Protocol (MCP) filesystem integration
-* **What:** Real-time data anchoring via external server configurations.
-* **Citation:** Declared in [app/agent.py:L157-164](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L157-164).
+### 2. CI/CD Staging Gates
+*   **Automated Quality Auditor:** Running `agent_quality_check.py` parses modified files to block commits that violate function lengths (>50 lines), module documentation, typing rules, or duplicate prompts.
+*   **Gherkin BDD specs:** Our behavior-driven specifications map natural-language routing requirements in [features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) to code validations.
 
-### 💡 Few-Shot Skill grounding
-* **What:** Sample inputs/outputs used to guide model generation.
-* **Citation:** Defined in [app/skills/researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json).
+### 3. Offline Evaluation & Scoring
+*   **LLM-as-a-Judge scorecard:** Dynamic red-teaming tasks generated by `DeepTester` are run against `mock_app` and graded by `OutcomeJudge` to report Token Saturation (TSR) and Cost reduction efficiency (CpE) ([test_deep_testing.py:L192-256](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py#L192-256)).
+
+---
+
+## 🔒 Security & Privacy Notice
+
+> [!CAUTION]
+> **Secret Redaction Compliance:** Do not commit `.env` configuration files to version control. The pre-commit quality gate checks the workspace and will reject commits containing raw credentials or plain-text secrets.

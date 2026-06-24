@@ -1,73 +1,72 @@
-# Unified Deployment Guide: Dashboard & Agent API
+# Cloud Deployment Guide
+### Containerizing and Deploying the Telemetry Dashboard & Agent API
 
-This guide explains how to deploy the Capability Arbitrator and its visual telemetry dashboard together in a single deployment on Google Cloud.
-
----
-
-## 1. Why: The Problem & The Vision
-* **The Problem:** Traditionally, deploying an AI agent means hosting the "brain" (the backend model/orchestration API) in one place, and the "body" (the user interface/telemetry dashboard) in another. Managing two URLs, setting up cross-origin permissions (CORS), and keeping them in sync is a headache.
-* **The Solution:** We unify them! By packaging both the agent's execution engine and the visual dashboard into a single FastAPI app, we can deploy a single container. A single URL serves the gorgeous web dashboard to humans and the execution API to terminal tools.
+This guide outlines how to package and deploy the Capability Arbitrator and its visual dashboard to Google Cloud.
 
 ---
 
-## 2. What: The Architecture
-The unified setup is a containerized web application built with:
-1. **The Backend API (`app/fast_api_app.py`):** Exposes standard ADK endpoints for the `agents-cli` to query, evaluate, and stream results.
-2. **The Dashboard (`/dashboard`):** Exposes a visual page showing costs, latency, and routing stats. It reads historical data from a lightweight database (`app/telemetry_db.json`) and streams agent queries to the backend.
-3. **The Deployment Target (Google Cloud Run):** Runs the container on demand, auto-scaling down to zero when idle to save money.
+## ⚡ Unified Container Architecture
+
+* **The Problem:** Traditionally, agent deployments split the agent's execution API from its user interface. Managing CORS headers, service accounts, and multiple cloud URLs is an operational headache.
+* **The Solution:** We package the FastAPI telemetry dashboard and the ADK Agent API into a single Docker container. A single Cloud Run service handles both visual dashboard monitoring for developers and API runtimes for CLI clients.
 
 ```mermaid
 graph TD
-    User([User in Browser]) -->|GET /dashboard| CloudRun[Google Cloud Run Service]
-    CLI([Agents CLI / API Client]) -->|POST /api/run| CloudRun
-    CloudRun -->|Runs App| FastAPI[FastAPI App: fast_api_app.py]
-    FastAPI -->|Serves UI| HTML[templates/index.html]
-    FastAPI -->|Executes Agent| Scout[Scout Node]
+    classDef default fill:#1e1e24,stroke:#3b3b4f,stroke-width:1px,color:#d4d4d8;
+    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
+    
+    User([User in Browser]) -->|GET /dashboard| CloudRun[Google Cloud Run Service]:::cloud
+    CLI([Agents CLI / Client]) -->|POST /api/run| CloudRun
+    CloudRun -->|FastAPI| AppInstance[fast_api_app.py]:::cloud
+    AppInstance -->|Serve UI| Dashboard[index.html]
+    AppInstance -->|Execute Graph| Scout[Scout Node]
 ```
 
 ---
 
-## 3. How: Step-by-Step Guide
+## 🚀 Deployment Instructions
 
-### Step A: Run and Test Locally
-Before pushing to the cloud, make sure everything works on your machine:
+### Step 1: Validate Locally
+Before deploying, verify that the unified app runs locally on your machine:
 ```bash
-# Start the unified FastAPI server
 uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 ```
-* **To view the Dashboard:** Open your browser to `http://127.0.0.1:8000/dashboard`
-* **To view the ADK Test Page:** Open `http://127.0.0.1:8000/`
+* **Dashboard Portal:** Open `http://127.0.0.1:8000/dashboard` in your browser.
+* **API Portal:** Open `http://127.0.0.1:8000/` to test endpoint responses.
 
-### Step B: Enhance Scaffolding for Cloud Run
-To generate the required container configuration (`Dockerfile` and Terraform infrastructure templates), tell the CLI to use Cloud Run:
+### Step 2: Initialize Infrastructure Scaffolding
+Generate the standard container configurations and Terraform templates required for Google Cloud:
 ```bash
 agents-cli scaffold enhance --deployment-target cloud_run
 ```
 
-### Step C: Provision Cloud Resources (First Time Only)
-Create the Google Cloud service accounts, permissions, and log storage buckets needed:
+### Step 3: Provision Cloud IAM Policies
+Provision the necessary service accounts, API access permissions, and log storage buckets in your GCP project:
 ```bash
 agents-cli infra single-project
 ```
 
-### Step D: Deploy to Google Cloud Run
-Deploy the unified container:
+### Step 4: Build and Deploy to Cloud Run
+Build the container image and deploy it live to Google Cloud Run:
 ```bash
 agents-cli deploy
 ```
-Once deployment finishes, the CLI will output your service URL (e.g., `https://capability-arbitrator-xyz.a.run.app`).
-* **Open `https://<your-service-url>/dashboard`** in your browser to view your live cloud telemetry dashboard.
-* **Run CLI commands** directly against it:
-  ```bash
-  agents-cli run --url https://<your-service-url> --mode adk "your prompt"
-  ```
+
+> [!NOTE]
+> Upon completion, the CLI will output your live URL (e.g. `https://capability-arbitrator-xyz.a.run.app`). Append `/dashboard` to view the live developer telemetry console.
 
 ---
 
-## 4. When to Use This Setup
-* **Use Cloud Run (This Unified Setup) when:**
-  * You want a simple "all-in-one" URL that serves the visual playground dashboard and handles API requests.
-  * You want to save costs by scaling the web frontend and agent executor down to zero when no one is using them.
-* **Use Agent Runtime (Reasoning Engine) only when:**
-  * You need a headless agent service with no user interface.
-  * You are integrating the agent strictly as a background microservice in a larger pre-existing application.
+## 🎯 Deployment Configuration Matrix
+
+| Target Option | Purpose | Use-Case | Key Metrics |
+| :--- | :--- | :--- | :--- |
+| **Google Cloud Run (Unified)** | Runs web frontend + agent execution API in one container | Default option for developers needing visual HUDs and API access | Latency, Request count, Container health |
+| **Agent Runtime (Reasoning Engine)** | Headless, model-managed orchestration layer | Backend-only integrations or microservice deployments | Execution latency, Prompt token count |
+
+---
+
+## 💰 Resource & Scaling Optimization
+
+> [!TIP]
+> **Scale-to-Zero Billing:** By deploying to Google Cloud Run, instances scale down to 0 when idle. This completely eliminates idle compute charges, significantly reducing operations cost for internal developer tools.
