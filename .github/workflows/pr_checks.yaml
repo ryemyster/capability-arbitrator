@@ -37,7 +37,7 @@ jobs:
         
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
-        if: secrets.WIF_POOL_ID != ''
+        if: vars.GCP_PROJECT_NUMBER != ''
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: 'projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.WIF_POOL_ID }}/providers/${{ secrets.WIF_PROVIDER_ID }}'
