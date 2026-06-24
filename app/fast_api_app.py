@@ -33,6 +33,8 @@ from app.app_utils.typing import Feedback
 
 setup_telemetry()
 try:
+    if os.environ.get("INTEGRATION_TEST") == "TRUE":
+        raise RuntimeError("Mocking logger in integration tests")
     _, project_id = google.auth.default()
     logging_client = google_cloud_logging.Client()
     logger = logging_client.logger(__name__)
