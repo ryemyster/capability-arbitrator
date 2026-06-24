@@ -74,8 +74,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 *   **[x] CI/CD Pipeline (GitHub Actions)**
     *   *What:* Automate testing and deployment using GitHub Actions workflows.
     *   *Citation:* *(Completed: Phase 4 [CI/CD via GitHub Actions] in [.github/workflows/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.github/workflows/))*
-*   **[ ] (Optional) Uses a FastAPI Manager Dashboard**
+*   **[x] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
+    *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/dashboard.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/dashboard.py))*
 *   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
     *   *What:* Automatically triggers agent runs in response to webhooks or messages.
 
@@ -85,6 +86,5 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 The following items are still required to achieve a gold-standard project submission:
 
-1.  **FastAPI Manager Dashboard & Stats for Nerds** - Tracked in [GitHub Issue #8](https://github.com/ryemyster/capability-arbitrator/issues/8)
-2.  **Pub/Sub Event Integration** - Tracked in [GitHub Issue #26](https://github.com/ryemyster/capability-arbitrator/issues/26)
+1.  **Pub/Sub Event Integration** - Tracked in [GitHub Issue #26](https://github.com/ryemyster/capability-arbitrator/issues/26)
 
