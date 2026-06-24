@@ -30,7 +30,8 @@ def test_solve_math_operations() -> None:
     assert solve_math("what is 15 plus 30") == "45"
     assert solve_math("100 minus 25") == "75"
     assert solve_math("50 divided by 2") == "25"
-    assert solve_math("50 divided by 0") == "Error: Division by zero."
+    assert solve_math("50 divided by 0") == "Error evaluating math expression: division by zero"
+    assert solve_math("WHats 9000 / 45 + 62 * pi") == "394.7787445226"
     assert solve_math("unparsable text here") == "Could not parse math expression."
 
 
