@@ -5,16 +5,30 @@ Why it exists: Speeds up development feedback loops and allows PR checks to pass
 How it works: Detects GCP credentials and git diffs to skip integration/scripts tests when appropriate.
 """
 
+import os
 import subprocess
 import google.auth
 
+# Detect if real GCP credentials are present
+try:
+    google.auth.default()
+    _REAL_GCP_AUTH_AVAILABLE = True
+except Exception:
+    _REAL_GCP_AUTH_AVAILABLE = False
+
+# If in CI or unauthenticated local runner, patch credentials to prevent internal ADK collection failures
+if not _REAL_GCP_AUTH_AVAILABLE:
+    class MockCredentials:
+        def refresh(self, request):
+            pass
+
+    def mock_default(*args, **kwargs):
+        return MockCredentials(), "mock-project-id"
+
+    google.auth.default = mock_default
+
 def pytest_collection_modifyitems(config, items) -> None:
-    # 1. Check for valid GCP authentication
-    has_gcp_auth = True
-    try:
-        google.auth.default()
-    except Exception:
-        has_gcp_auth = False
+    has_gcp_auth = _REAL_GCP_AUTH_AVAILABLE
 
     try:
         # If no GCP auth is available, skip integration and script tests
