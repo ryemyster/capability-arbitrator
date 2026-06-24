@@ -13,14 +13,14 @@ Our compliance requirements are categorized into four execution layers:
 | :--- | :--- | :--- | :--- |
 | **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L205-219](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L205-219) |
 | | Conditional Branching | Dynamic routing by classification | [app/agent.py:L98-109](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L98-109) |
-| | Security Screen | GDPR PII regex redactor | [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204) |
+| | Security Screen | GDPR PII regex redactor | [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
 | | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) |
 | | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150) |
 | **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) |
 | | BDD Verification | Gherkin integration routing | [test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py) |
 | | Pytest Suite | Unit/Integration testing | [tests/unit/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/) |
 | **Runtime Evals** | Scorecard Evals | LLM-as-a-Judge evaluations | [test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py) |
-| | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md) |
+| | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
 | **Dev & Dashboard** | Telemetry HUD | Dashboard UI & visual metrics | [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) |
 | | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L157-164](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L157-164) |
 | | Few-Shot Examples | In-context skill exemplars | [researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json) |

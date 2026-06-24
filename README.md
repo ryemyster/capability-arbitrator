@@ -39,6 +39,7 @@ Explore our guides to understand, develop, and deploy the Capability Arbitrator:
 | [📐 System Architecture](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/ARCHITECTURE.md) | Technical blueprint and workflow topology | Scout-and-Execute pattern, Mermaid flowcharts, supervisor nodes |
 | [🛠️ Developer Portal](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/DEVELOPMENT.md) | Local setup, skills development, and MCP configuration | Filesystem MCP servers, AST quality checker, git hooks |
 | [🧪 Verification & Testing](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) | Quality assurance and evaluation scorecards | BDD Gherkin specs, manual QA script checklists, LLM-as-a-Judge |
+| [🔒 Security & Privacy](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) | GDPR PII filtration and STRIDE audits | Regex filtration screen, HITL escalation, threat modeling reports |
 | [🚀 Deployment Guide](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/DEPLOYMENT.md) | Cloud scaling and containerization | FastAPI Dashboard, Google Cloud Run, auto-scaling |
 | [🏅 Rubric & Compliance](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/RUBRIC.md) | Kaggle Capstone alignment and validations | Clickable file/line citations mapping requirements to the codebase |
 
