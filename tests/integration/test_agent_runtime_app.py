@@ -1,3 +1,10 @@
+"""
+File: test_agent_runtime_app.py
+Purpose: Implements Gherkin BDD step definitions for the Agent Runtime App.
+Why it exists: Enforces BDD Gherkin usage for all integration tests.
+How it works: Resolves step scenarios for streaming queries and user feedback registration.
+"""
+
 # Copyright 2026 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,40 +19,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 import pytest
+from pytest_bdd import given, when, then, scenarios, parsers
 from google.adk.events.event import Event
-
 from app.agent_runtime_app import AgentEngineApp
+
+# Bind Gherkin scenarios
+scenarios("features/agent_runtime.feature")
 
 
 @pytest.fixture
 def agent_app(monkeypatch: pytest.MonkeyPatch) -> AgentEngineApp:
     """Fixture to create and set up AgentEngineApp instance"""
-    # Set integration test flag to mock external services
     monkeypatch.setenv("INTEGRATION_TEST", "TRUE")
-
     from app.agent_runtime_app import agent_runtime
-
     agent_runtime.set_up()
     return agent_runtime
 
 
-@pytest.mark.asyncio
-async def test_agent_stream_query(agent_app: AgentEngineApp) -> None:
-    """
-    Integration test for the agent stream query functionality.
-    Tests that the agent returns valid streaming responses.
-    """
-    # Create message and events for the async_stream_query
-    message = "Hi!"
-    events = []
-    async for event in agent_app.async_stream_query(message=message, user_id="test"):
-        events.append(event)
+@pytest.fixture
+def test_context() -> dict:
+    return {}
+
+
+@given("the Agent Runtime App is active")
+def check_app_active(agent_app: AgentEngineApp) -> None:
+    assert agent_app is not None
+
+
+@when(parsers.parse('the user sends a stream query "{query}"'))
+def send_stream_query(agent_app: AgentEngineApp, query: str, test_context: dict) -> None:
+    import asyncio
+    async def run() -> list:
+        events = []
+        async for event in agent_app.async_stream_query(message=query, user_id="test"):
+            events.append(event)
+        return events
+    test_context["events"] = asyncio.run(run())
+
+
+@then("the runtime app returns a streaming response with text")
+def verify_app_stream_text(test_context: dict) -> None:
+    events = test_context["events"]
     assert len(events) > 0, "Expected at least one chunk in response"
 
-    # Check for valid content in the response
     has_text_content = False
     for event in events:
         validated_event = Event.model_validate(event)
@@ -61,29 +78,29 @@ async def test_agent_stream_query(agent_app: AgentEngineApp) -> None:
     assert has_text_content, "Expected at least one event with text content"
 
 
-def test_agent_feedback(agent_app: AgentEngineApp) -> None:
-    """
-    Integration test for the agent feedback functionality.
-    Tests that feedback can be registered successfully.
-    """
-    feedback_data = {
-        "score": 5,
-        "text": "Great response!",
+@when(parsers.parse('the user submits valid feedback score {score:d} and text "{text}"'))
+def submit_valid_feedback(agent_app: AgentEngineApp, score: int, text: str, test_context: dict) -> None:
+    test_context["feedback_data"] = {
+        "score": score,
+        "text": text,
         "user_id": "test-user-456",
         "session_id": "test-session-456",
     }
 
-    # Should not raise any exceptions
-    agent_app.register_feedback(feedback_data)
 
-    # Test invalid feedback
+@then("the feedback is successfully registered")
+def verify_feedback_registered(agent_app: AgentEngineApp, test_context: dict) -> None:
+    # Should not raise any exceptions
+    agent_app.register_feedback(test_context["feedback_data"])
+
+
+@then(parsers.parse('submitting feedback with invalid score "{invalid_score}" raises a value error'))
+def verify_invalid_feedback(agent_app: AgentEngineApp, invalid_score: str) -> None:
     with pytest.raises(ValueError):
         invalid_feedback = {
-            "score": "invalid",  # Score must be numeric
+            "score": invalid_score,
             "text": "Bad feedback",
             "user_id": "test-user-789",
             "session_id": "test-session-789",
         }
         agent_app.register_feedback(invalid_feedback)
-
-    logging.info("All assertions passed for agent feedback test")
