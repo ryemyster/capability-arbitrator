@@ -11,18 +11,18 @@ Our compliance requirements are categorized into four execution layers:
 
 | Layer | Requirement | Implementation Strategy | Code Citation |
 | :--- | :--- | :--- | :--- |
-| **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L205-219](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L205-219) |
-| | Conditional Branching | Dynamic routing by classification | [app/agent.py:L98-109](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L98-109) |
-| | Security Screen | GDPR PII regex redactor | [app/agent.py:L185-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L185-204), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
+| **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) |
+| | Conditional Branching | Dynamic routing by classification | [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) |
+| | Security Screen | GDPR PII regex redactor | [app/agent.py:L225-244](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L225-244), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
 | | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) |
-| | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150) |
+| | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L138-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L138-156) |
 | **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) |
 | | BDD Verification | Gherkin integration routing | [test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py) |
 | | Pytest Suite | Unit/Integration testing | [tests/unit/](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/) |
 | **Runtime Evals** | Scorecard Evals | LLM-as-a-Judge evaluations | [test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py) |
 | | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/stride/SKILL.md), [SECURITY.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/SECURITY.md) |
 | **Dev & Dashboard** | Telemetry HUD | Dashboard UI & visual metrics | [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) |
-| | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L157-164](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L157-164) |
+| | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L187-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L187-204) |
 | | Few-Shot Examples | In-context skill exemplars | [researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json) |
 
 ---
@@ -30,9 +30,9 @@ Our compliance requirements are categorized into four execution layers:
 ## 📂 Implementation Details & Verification
 
 ### 1. Production Runtime Guardrails
-*   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L59-94](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L59-94)).
+*   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L93-121](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L93-121)).
 *   **Security Gating:** The `security_screen` intercepts the prompt first to redact credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides routing and escalates directly to human approval.
-*   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L133-150](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L133-150)).
+*   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L138-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L138-156)).
 
 ### 2. CI/CD Staging Gates
 *   **Automated Quality Auditor:** Running `agent_quality_check.py` parses modified files to block commits that violate function lengths (>50 lines), module documentation, typing rules, or duplicate prompts.

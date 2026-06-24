@@ -140,7 +140,9 @@ async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event |
     import sys
     alert_msg = str(node_input) or "High-risk routing."
     if any("_inference_runner.py" in arg for arg in sys.argv):
-        yield Event(output=f"Approval auto-granted in eval mode. Details: {alert_msg}")
+        msg = f"Approval auto-granted in eval mode. Details: {alert_msg}"
+        yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
+        yield Event(output=msg)
         return
     if getattr(ctx, "resume_inputs", None) is None or "approval_req" not in ctx.resume_inputs:
         record_hitl(escalated=True, approved=False, latency=0.0)

@@ -39,3 +39,22 @@ class Feedback(BaseModel):
     service_name: Literal["capability-arbitrator"] = "capability-arbitrator"
     user_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+class PubSubMessage(BaseModel):
+    """Pydantic model representing a Pub/Sub message data envelope."""
+
+    data: str
+    attributes: dict[str, str] | None = None
+    message_id: str | None = Field(default=None, alias="messageId")
+    publish_time: str | None = Field(default=None, alias="publishTime")
+
+    model_config = {"populate_by_name": True}
+
+
+class PubSubEnvelope(BaseModel):
+    """Pydantic model representing the overall Pub/Sub push notification envelope."""
+
+    message: PubSubMessage
+    subscription: str
+

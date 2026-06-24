@@ -18,3 +18,25 @@ def get_prompt_text(ctx: Context) -> str:
                 parts.append(p.text)
         return " ".join(parts)
     return ""
+
+
+def decode_pubsub_payload(data: str) -> str:
+    """Decodes base64 data and extracts prompt string or JSON prompt.
+
+    Args:
+        data: The base64-encoded string from Pub/Sub.
+
+    Returns:
+        The extracted prompt string.
+    """
+    import base64
+    import json
+    decoded_str = base64.b64decode(data).decode("utf-8")
+    try:
+        data_json = json.loads(decoded_str)
+        if isinstance(data_json, dict) and "prompt" in data_json:
+            return str(data_json["prompt"])
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return decoded_str
+

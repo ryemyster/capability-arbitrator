@@ -29,7 +29,7 @@ from google.adk.cli.fast_api import get_fast_api_app
 from google.cloud import logging as google_cloud_logging
 
 from app.app_utils.telemetry import setup_telemetry
-from app.app_utils.typing import Feedback
+from app.app_utils.typing import Feedback, PubSubEnvelope
 
 setup_telemetry()
 try:
@@ -81,6 +81,52 @@ def collect_feedback(feedback: Feedback) -> dict[str, str]:
     """
     logger.log_struct(feedback.model_dump(), severity="INFO")
     return {"status": "success"}
+
+
+@app.post("/pubsub")
+async def handle_pubsub(envelope: PubSubEnvelope) -> dict[str, Any]:
+    """Handles GCP Pub/Sub push messages and routes them to the agent graph.
+
+    Args:
+        envelope: The Pub/Sub payload notification wrapper.
+
+    Returns:
+        JSON response with the query execution status and model output.
+    """
+    from app.agent_runtime_app import agent_runtime
+    from app.app_utils.routing_utils import decode_pubsub_payload
+
+    try:
+        # Decode base64 payload data and parse prompt
+        prompt = decode_pubsub_payload(envelope.message.data)
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to decode Pub/Sub data: {e}"}
+
+    # Run the arbitrator agent workflow on the extracted prompt
+    output_parts = []
+    try:
+        async for event in agent_runtime.async_stream_query(
+            message=prompt,
+            user_id="pubsub-user",
+            session_id=f"pubsub-session-{envelope.message.message_id or 'ambient'}",
+        ):
+            if event.content and event.content.parts:
+                for p in event.content.parts:
+                    if p.text:
+                        output_parts.append(p.text)
+            elif event.output:
+                if isinstance(event.output, dict) and "capability_tag" in event.output:
+                    continue
+                output_parts.append(str(event.output))
+    except Exception as e:
+        return {"status": "error", "prompt": prompt, "error": f"Agent execution failed: {e}"}
+
+    return {
+        "status": "success",
+        "prompt": prompt,
+        "output": "".join(output_parts),
+    }
+
 
 
 TEMPLATE_PATH = os.path.join(

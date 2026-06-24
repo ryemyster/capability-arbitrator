@@ -14,6 +14,9 @@ These constraints are mandatory and must be strictly followed for all operations
   - You are STRICTLY FORBIDDEN from navigating into or reading files from Antigravity system directories, such as `/Users/rmcdonald/.gemini/` or `/Users/rmcdonald/.gemini/antigravity-cli/brain/` (except the conversation's own artifacts folder if writing/updating artifacts).
   - You are STRICTLY FORBIDDEN from reading or modifying generated Python files (e.g., those under `app/.adk/` or any `__pycache__/` directories).
   - ONLY read/modify core source code files in the project workspace (e.g., `app/`, `tests/`, `scripts/`, `docs/`, `pyproject.toml`, or `agents-cli-manifest.yaml`).
+- **No System Scratch Files (CRITICAL)**:
+  - You are STRICTLY FORBIDDEN from creating, writing, or executing any scratch Python or bash scripts under the Antigravity system directories (such as `/Users/rmcdonald/.gemini/antigravity-cli/brain/.../scratch/` or any subdirectories).
+  - You must rely exclusively on in-memory research, code-reading, and standard read-only commands/tools rather than dropping files onto the system filesystem outside the repository.
 
 ### Security Gates
 - **Secret Zero-Trust**: NEVER read the contents of `.env` files using `view_file` or any terminal command.

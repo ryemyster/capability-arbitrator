@@ -140,3 +140,6 @@ Feature: Agent Runtime App Functionality
 > 3. Custom capability definitions in `app/agent.py`
 > 
 > **MUST** update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
+
+---
+*Last Updated: 2026-06-24T17:32:00-06:00 (Post-generalization bugfix verifying offline eval run completes and grades successfully).*
