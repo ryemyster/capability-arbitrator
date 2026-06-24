@@ -1,13 +1,13 @@
-# Phase 3 Manual QA Tests (Observability & Telemetry)
+# Phase 5 Manual QA Tests (Observability & Telemetry)
 
 ## Objective
 Verify that the `LoggingPlugin` and `DebugLoggingPlugin` are correctly tracing the execution path, capturing prompt payloads, identifying system instruction swaps, and tracking token counts. (BigQuery Analytics testing is deferred since Terraform provisioning is not available).
 
 ## Test 1: Verifying Console Telemetry
 1. Open a terminal in the project root.
-2. Run the Phase 3 test script:
+2. Run the Phase 5 test script:
    ```bash
-   uv run python scripts/test_phase3_observability.py
+   uv run python tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py
    ```
 3. **Expected Behavior:**
    - The terminal should output an extremely detailed execution trace prefixed with `[logging_plugin]`.

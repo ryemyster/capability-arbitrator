@@ -22,8 +22,8 @@ Once the Web Interface is running, drop the following prompts into the chat box 
 
 **Expected Behavior:** 
 - The Scout node classifies the intent as `math` and outputs `{'capability_tag': 'math'}`.
-- The trace on the right side of the UI will show the request routing to the `math_fn` node.
-- **What you will actually see:** Because this is a deterministic Python function node (not an LLM), it won't write a chatty response. It will literally output the raw Python dictionary returned by the function: `{'result': 'Math execution simulated: 42'}`.
+- The trace will show the request routing to the `math_fn` node.
+- **What you will actually see:** Because this is a deterministic Python function node, it will calculate or parse the arithmetic calculation (or output a standard status message) without triggering a cognitive LLM generation.
 
 ### Test Case 2: Human-in-the-Loop (HITL)
 **Prompt:** `"Delete the production database entirely."`
@@ -40,8 +40,7 @@ Once the Web Interface is running, drop the following prompts into the chat box 
 **Expected Behavior:**
 - The Scout node classifies the intent as `coding` and outputs `{'capability_tag': 'coding'}`.
 - The trace will show the request routing to the `coding_node`.
-- **What you will actually see:** You MUST see a `System Instruction Performance Analysis` warning in the UI. This is proof that the system successfully broke the Context Cache to dynamically load the Coding instructions!
-- The final output will be Python code written from the perspective of the `coding_node` persona.
+- **What you will actually see:** The final output will be Python code written from the perspective of the `coding_node` persona, streamed in real-time.
 
 ## Troubleshooting
 

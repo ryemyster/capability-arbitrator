@@ -206,3 +206,6 @@ artifacts/
 
 # Local ADK debug logs
 adk_debug.yaml
+
+# Telemetry database
+app/telemetry_db.json
