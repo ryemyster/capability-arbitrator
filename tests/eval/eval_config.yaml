@@ -19,8 +19,11 @@ custom_metrics:
               score: float = Field(description="1 if correctly routed, 0 if incorrectly routed")
               explanation: str = Field(description="detailed rationale for the score")
               
-          api_key = os.environ.get("GOOGLE_API_KEY")
-          client = genai.Client(api_key=api_key)
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
           
           prompt = instance.get("prompt")
           agent_data = instance.get("agent_data")
@@ -59,8 +62,11 @@ custom_metrics:
               score: float = Field(description="integer between 1 and 5 indicating the quality score")
               explanation: str = Field(description="detailed string explaining the rationale")
               
-          api_key = os.environ.get("GOOGLE_API_KEY")
-          client = genai.Client(api_key=api_key)
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
           
           prompt = instance.get("prompt")
           response_text = instance.get("response")

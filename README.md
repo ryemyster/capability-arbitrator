@@ -47,7 +47,15 @@ This is our secret weapon! It means we are intentionally clearing the AI's memor
 *   **The massive upside:** The AI becomes hyper-focused, stops hallucinating, and uses way fewer tokens because it isn't distracted by irrelevant instructions.
 *   **Phase 7 (The End Goal):** Moving beyond a proof-of-concept, the Arbitrator is designed to be wired into real-world software projects. It will act as a headless daemon for daily developer workflows—automatically triaging GitHub tickets, conducting automated PR reviews, and executing codebase regressions via CI/CD.
 
-## 4. Getting Started
+## 4. Outcomes & Key Performance Indicators (KPIs)
+To measure and prove that a capability-first architecture outperforms a monolithic agent layout, the system evaluates three core outcomes:
+1. **Eradicating Context Rot & Maximizing Reasoning Budget:** (Context window efficiency, Scout time-to-first-token, overall task latency).
+2. **High-Fidelity Task Execution:** (Scout routing precision, deterministic offloading rate, output reliability score).
+3. **Secure & Gated Enterprise Operations:** (Pre-LLM PII/SSN redaction, STRIDE coverage, human-in-the-loop escalation accuracy).
+
+Detailed metric definitions, value dimensions, and evaluation scorecards are documented in [OUTCOMES.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/OUTCOMES.md).
+
+## 5. Getting Started
 
 Before you begin, ensure you have:
 - **uv**: Python package manager - [Install](https://docs.astral.sh/uv/getting-started/installation/)
