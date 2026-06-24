@@ -27,12 +27,18 @@ def main() -> None:
         sys.exit(1)
 
     # 2. Ensure current branch is branched from develop
+    base_ref = "develop"
     try:
-        # Check if 'develop' is an ancestor of HEAD (exit code 0 if true, 1 if false)
-        subprocess.run(["git", "merge-base", "--is-ancestor", "develop", "HEAD"], check=True)
+        subprocess.run(["git", "rev-parse", "--verify", "develop"], capture_output=True, check=True)
     except subprocess.CalledProcessError:
-        print("❌ ERROR: Current branch is not branched off 'develop'!")
-        print("Please rebase onto 'develop' or branch from 'develop' directly.")
+        base_ref = "origin/develop"
+
+    try:
+        # Check if base_ref is an ancestor of HEAD (exit code 0 if true, 1 if false)
+        subprocess.run(["git", "merge-base", "--is-ancestor", base_ref, "HEAD"], check=True)
+    except subprocess.CalledProcessError:
+        print(f"❌ ERROR: Current branch is not branched off '{base_ref}'!")
+        print(f"Please rebase onto '{base_ref}' or branch from '{base_ref}' directly.")
         sys.exit(1)
     except Exception as e:
         print(f"Error checking ancestor: {e}")

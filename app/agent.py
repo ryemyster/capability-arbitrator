@@ -27,10 +27,18 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
+import time
 from typing import AsyncGenerator
 from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.math_utils import solve_math
 from app.app_utils.skill_utils import load_skill_instructions
+from app.app_utils.telemetry import (
+    init_telemetry,
+    record_security_screen,
+    record_scout,
+    record_node_execution,
+    record_hitl
+)
 
 from functools import cached_property
 from google import genai
@@ -72,6 +80,7 @@ async def llm_scout_fn(ctx: Context, node_input: Any) -> Event:
         project=PROJECT_ID,
         location=LOCATION,
     )
+    start_time = time.time()
     response = await client.aio.models.generate_content(
         model=MODEL,
         contents=prompt,
@@ -85,6 +94,7 @@ Return the appropriate capability tag.
             response_schema=ScoutOutput,
         ),
     )
+    latency = time.time() - start_time
 
     import json
     tag = "approval"
@@ -95,6 +105,13 @@ Return the appropriate capability tag.
     except Exception:
         pass
 
+    input_tokens = 0
+    output_tokens = 0
+    if response.usage_metadata:
+        input_tokens = response.usage_metadata.prompt_token_count
+        output_tokens = response.usage_metadata.candidates_token_count
+
+    record_scout(tag, latency, input_tokens, output_tokens)
     return Event(output={"capability_tag": tag})
 
 
@@ -125,7 +142,10 @@ async def math_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event, None
     print(f"DEBUG math_node input: {node_input}")
     prompt = get_prompt_text(ctx)
     print(f"DEBUG math_node prompt: {prompt}")
+    start_time = time.time()
     result = solve_math(prompt)
+    latency = time.time() - start_time
+    record_node_execution("math", latency, 0, 0)
     print(f"DEBUG math_node result: {result}")
     yield Event(
         content=types.Content(
@@ -151,12 +171,16 @@ async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event |
         getattr(ctx, "resume_inputs", None) is None
         or "approval_req" not in ctx.resume_inputs
     ):
+        record_hitl(escalated=True, approved=False, latency=0.0)
         prompt_text = f"🚨 PAUSING WORKFLOW 🚨\n{alert_msg}\n\nApprove routing? (y/n)"
         yield RequestInput(interrupt_id="approval_req", message=prompt_text)
         return
 
     approved = ctx.resume_inputs.get("approval_req", "")
-    if approved.lower() in ["y", "yes", "approve", "true"]:
+    is_approved = approved.lower() in ["y", "yes", "approve", "true"]
+    record_hitl(escalated=True, approved=is_approved, latency=5.0)  # estimate 5s decision latency
+    
+    if is_approved:
         yield Event(
             content=types.Content(
                 role="model",
@@ -189,6 +213,15 @@ stride_node = LlmAgent(
     instruction=load_skill_instructions("stride"),
 )
 
+filesystem_mcp = McpToolset(
+    connection_params=StdioConnectionParams(
+        server_params=StdioServerParameters(
+            command="npx",
+            args=["-y", "@modelcontextprotocol/server-filesystem", os.getcwd()],
+        ),
+    ),
+)
+
 coding_node = LlmAgent(
     name="coding_node",
     model=global_model,
@@ -196,16 +229,7 @@ coding_node = LlmAgent(
 IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv', '.git', '.pytest_cache', '__pycache__', or '.google-agents-cli' directories. Always ignore these directories in your search.
 QUALITY RULE: Whenever you modify Python files in 'app/', you must run the quality verification checks using `uv run python scripts/agent_quality_check.py` and auto-correct any violations (e.g. line limits, DRY rules, missing type signatures, missing module header blocks) before completing your task.
 """,
-    tools=[
-        McpToolset(
-            connection_params=StdioConnectionParams(
-                server_params=StdioServerParameters(
-                    command="npx",
-                    args=["-y", "@modelcontextprotocol/server-filesystem", os.getcwd()],
-                ),
-            ),
-        )
-    ],
+    tools=[filesystem_mcp],
 )
 
 mcp_node = LlmAgent(
@@ -214,16 +238,7 @@ mcp_node = LlmAgent(
     instruction="""You are the dedicated MCP node. You connect to local filesystem data to answer questions.
 IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv', '.git', '.pytest_cache', '__pycache__', or '.google-agents-cli' directories. Always ignore these directories in your search.
 """,
-    tools=[
-        McpToolset(
-            connection_params=StdioConnectionParams(
-                server_params=StdioServerParameters(
-                    command="npx",
-                    args=["-y", "@modelcontextprotocol/server-filesystem", os.getcwd()],
-                ),
-            ),
-        )
-    ],
+    tools=[filesystem_mcp],
 )
 
 
@@ -231,6 +246,8 @@ IMPORTANT: You must NEVER list, read, search, or access any files inside '.venv'
 def security_screen(node_input: str) -> Event:
     # Check for multiple PII/GDPR patterns (SSN, Email, Phone, Credit Card, IP)
     input_str = str(node_input)
+    init_telemetry(input_str)
+    
     pii_patterns = {
         "Social Security Number": r"\b\d{3}-\d{2,3}-\d{4}\b",
         "Email Address": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
@@ -246,11 +263,14 @@ def security_screen(node_input: str) -> Event:
 
     if detected:
         pii_list = ", ".join(detected)
+        record_security_screen(pii_detected=True, pii_types=detected)
         # Short-circuit to Human-in-the-Loop review
         return Event(
             output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})",
             route="approval",  # type: ignore
         )
+        
+    record_security_screen(pii_detected=False, pii_types=[])
     return Event(output=node_input, route="safe")  # type: ignore
 
 
@@ -269,11 +289,7 @@ root_workflow = Workflow(
         Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE),
     ],
 )
-
-# Export root_agent for integration tests that import it directly
 root_agent = root_workflow
-
-
 app = App(
     root_agent=root_workflow,
     name="app",

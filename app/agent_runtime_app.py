@@ -78,6 +78,8 @@ class AgentEngineApp(AdkApp):
         **kwargs,
     ) -> AsyncGenerator[Any, None]:
         """Intercepts streaming query to run locally in integration tests."""
+        from app.app_utils.telemetry import save_run
+
         if os.environ.get("INTEGRATION_TEST") == "TRUE":
             from google.adk.runners import InMemoryRunner
             from google.genai import types
@@ -89,25 +91,31 @@ class AgentEngineApp(AdkApp):
                 session_id=session_id,
             )
             msg_str = message if isinstance(message, str) else str(message)
-            async for event in runner.run_async(
-                user_id=user_id,
-                session_id=session.id,
-                new_message=types.Content(
-                    role="user", parts=[types.Part.from_text(text=msg_str)]
-                ),
-            ):
-                yield event
+            try:
+                async for event in runner.run_async(
+                    user_id=user_id,
+                    session_id=session.id,
+                    new_message=types.Content(
+                        role="user", parts=[types.Part.from_text(text=msg_str)]
+                    ),
+                ):
+                    yield event
+            finally:
+                save_run()
             return
 
-        async for event in super().async_stream_query(
-            message=message,
-            user_id=user_id,
-            session_id=session_id,
-            session_events=session_events,
-            run_config=run_config,
-            **kwargs,
-        ):
-            yield event
+        try:
+            async for event in super().async_stream_query(
+                message=message,
+                user_id=user_id,
+                session_id=session_id,
+                session_events=session_events,
+                run_config=run_config,
+                **kwargs,
+            ):
+                yield event
+        finally:
+            save_run()
 
     def register_operations(self) -> dict[str, list[str]]:
         """Registers the operations of the Agent."""
