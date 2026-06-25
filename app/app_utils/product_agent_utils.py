@@ -30,20 +30,21 @@ from google.adk.agents.context import Context
 from google.adk.events.event import Event
 from google.adk.workflow import FunctionNode
 
+from app.app_utils.kpi_config_loader import load_kpi_config
 from app.app_utils.telemetry import calculate_savings, get_current_telemetry, update_telemetry
 
-# KPI thresholds from docs/OUTCOMES.md
-_ROUTING_CONFIDENCE_THRESHOLD = 75.0  # pct — Outcome 2
-_LATENCY_THRESHOLD_SECONDS = 30.0     # sec — Outcome 1 (Watchdog budget)
-_TOKEN_SAVINGS_THRESHOLD = 0.80       # ratio — Outcome 1 (CpE >80% reduction)
+
+def _pa_cfg() -> dict:
+    return load_kpi_config()["product_agent"]
 
 
 def _check_routing_confidence(telemetry: dict[str, Any]) -> dict[str, Any]:
+    threshold = _pa_cfg()["routing_confidence_threshold"]
     confidence = float(telemetry.get("scout_confidence", 0.0))
     return {
-        "pass": confidence >= _ROUTING_CONFIDENCE_THRESHOLD,
+        "pass": confidence >= threshold,
         "scout_confidence": confidence,
-        "threshold": _ROUTING_CONFIDENCE_THRESHOLD,
+        "threshold": threshold,
     }
 
 
@@ -69,24 +70,26 @@ def _check_pii_compliance(telemetry: dict[str, Any]) -> dict[str, Any]:
 
 
 def _check_latency(telemetry: dict[str, Any]) -> dict[str, Any]:
+    threshold = _pa_cfg()["latency_threshold_seconds"]
     elapsed = time.time() - float(telemetry.get("timestamp", time.time()))
     return {
-        "pass": elapsed < _LATENCY_THRESHOLD_SECONDS,
+        "pass": elapsed < threshold,
         "elapsed_seconds": round(elapsed, 2),
-        "threshold": _LATENCY_THRESHOLD_SECONDS,
+        "threshold": threshold,
     }
 
 
 def _check_token_efficiency(telemetry: dict[str, Any]) -> dict[str, Any]:
+    threshold = _pa_cfg()["token_savings_threshold"]
     run_copy = copy.deepcopy(telemetry)
     run_copy = calculate_savings(run_copy)
     token_savings = int(run_copy.get("token_savings", 0))
     monolithic_in = int(run_copy.get("monolithic_in_tokens", 1))
     savings_ratio = token_savings / monolithic_in if monolithic_in > 0 else 0.0
     return {
-        "pass": savings_ratio >= _TOKEN_SAVINGS_THRESHOLD,
+        "pass": savings_ratio >= threshold,
         "savings_ratio": round(savings_ratio, 3),
-        "threshold": _TOKEN_SAVINGS_THRESHOLD,
+        "threshold": threshold,
         "token_savings": token_savings,
     }
 

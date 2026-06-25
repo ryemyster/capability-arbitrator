@@ -57,6 +57,42 @@ graph TD
 
 ---
 
+## 🔄 Offline Optimization Loop (Quality Flywheel)
+
+The Quality Flywheel is an **autonomic offline optimizer** that runs outside the live agent graph. Think of it like a teacher reviewing exam mistakes after class: it reads recent telemetry violations, writes a better practice example, checks that nothing broke, then raises a pull request.
+
+```
+telemetry_db.json
+       │
+       ▼
+1. DETECT — scan last 20 rows for routing_confidence violations; group by scout_tag
+       │
+       ▼  (if count ≥ 3 for any tag with a few_shots.json)
+2. GENERATE — call Gemini with SKILL.md + existing examples + violation context
+              → produce one new {input, output} few-shot example
+       │
+       ▼
+3. WRITE — append new example to app/skills/<tag>/few_shots.json
+       │
+       ▼
+4. VALIDATE — run phase6 deep-testing script; routing accuracy must be ≥ 60%
+       │
+       ├── FAIL → revert few_shots.json, exit non-zero (no PR)
+       │
+       └── PASS → PR → create branch flywheel/optimize-<tag>-<date>, open PR to develop
+```
+
+**Trigger:**
+```bash
+uv run arbitrator flywheel                # full run
+uv run arbitrator flywheel --dry-run     # print what would change, no writes
+```
+
+All thresholds (window, violation count, validation gate) live in [`config/kpi_config.yaml`](../config/kpi_config.yaml).
+Implementation: [`app/app_utils/flywheel_utils.py`](../app/app_utils/flywheel_utils.py), CLI entry: [`app/cli.py`](../app/cli.py).
+
+---
+
 ## 📡 Ambient Event-Driven Pipeline
 
 To support background operations (such as automated pull request triage), the system can be triggered ambiently via Google Cloud Pub/Sub:
