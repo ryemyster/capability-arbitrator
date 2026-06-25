@@ -93,6 +93,41 @@ Implementation: [`app/app_utils/flywheel_utils.py`](../app/app_utils/flywheel_ut
 
 ---
 
+## 🩺 Offline Security Loop (STRIDE Self-Healing)
+
+The STRIDE Self-Healing pipeline is a second **autonomic offline optimizer** that runs outside the live graph. Where the Quality Flywheel improves skill routing, this loop fixes security vulnerabilities: it audits a source file, generates a patch, verifies it, and raises a PR.
+
+```
+target_file.py
+       │
+       ▼
+1. AUDIT   — call STRIDE skill LLM on the file; produce a threat modeling report
+       │
+       ▼  (if medium/high findings exist)
+2. DETECT  — parse Threat Modeling Table; pick the highest-severity finding
+       │
+       ▼  (mode != audit_only)
+3. PATCH   — call patch_agent LLM with vulnerability + code → patched file content
+       │
+       ▼
+4. VERIFY  — run `uv run pytest tests/unit/ -x -q`
+       │
+       ├── FAIL → revert file, retry up to max_attempts, then exit non-zero
+       │
+       └── PASS → (mode == open_pr) create branch stride-heal/<id>-<date>, open PR to develop
+```
+
+**Trigger:**
+```bash
+uv run arbitrator stride-heal <file>                          # uses mode from config
+uv run arbitrator stride-heal <file> --mode audit_only        # report only, no writes
+uv run arbitrator stride-heal <file> --dry-run                # print plan, no writes
+```
+
+Config: [`config/stride_self_healing.yaml`](../config/stride_self_healing.yaml). Implementation: [`app/app_utils/patch_agent_utils.py`](../app/app_utils/patch_agent_utils.py). CLI entry: [`app/cli.py`](../app/cli.py). Skill: [`app/skills/patch_agent/SKILL.md`](../app/skills/patch_agent/SKILL.md).
+
+---
+
 ## 📡 Ambient Event-Driven Pipeline
 
 To support background operations (such as automated pull request triage), the system can be triggered ambiently via Google Cloud Pub/Sub:

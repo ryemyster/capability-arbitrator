@@ -17,6 +17,7 @@ Our compliance requirements are categorized into four execution layers:
 | | Output Safety Gate | Compliance judge scans outputs for secret leaks, auto-heals | [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py) |
 | | KPI Outcome Auditor | Product Agent checks all 5 KPI thresholds per transaction, writes verdicts to telemetry for eval scorecard integration | [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) |
 | | Quality Flywheel | Autonomic offline optimizer: reads telemetry violations, generates improved few-shots via Gemini, validates routing accuracy, opens PR | [app/app_utils/flywheel_utils.py](app/app_utils/flywheel_utils.py), [config/kpi_config.yaml](../config/kpi_config.yaml) |
+| | STRIDE Self-Healing | Autonomic security loop: audits a file via STRIDE, generates a targeted patch via patch_agent, verifies with pytest, opens PR; disabled by default with escalating autonomy modes | [app/app_utils/patch_agent_utils.py](app/app_utils/patch_agent_utils.py), [app/skills/patch_agent/SKILL.md](app/skills/patch_agent/SKILL.md), [config/stride_self_healing.yaml](../config/stride_self_healing.yaml) |
 | | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](.agents/CONTEXT.md) |
 | | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L138-156](app/agent.py#L138-156) |
 | **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](scripts/agent_quality_check.py) |
