@@ -61,6 +61,23 @@ That means we validate it in two layers:
 
 Use this rule of thumb: deterministic pytest proves watchdog mechanics, while evals monitor whether production-like traces continue to show healthy budget behavior.
 
+### 5. Scout Supervisor Validation
+The Scout Supervisor is also a runtime guardrail. It checks whether the Scout is confident enough to route a prompt automatically.
+
+* **Deterministic supervisor tests:** [tests/unit/test_scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_scout_supervisor_utils.py) sends fake Scout outputs into the supervisor. These tests prove that high-confidence routes continue, low-confidence routes pause for approval, and invalid confidence values fail closed to approval.
+* **Mocked graph routing:** [tests/conftest.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/conftest.py) makes mocked Scout responses include a high `confidence_score`, so existing BDD routing tests keep checking routing behavior instead of accidentally testing the low-confidence approval path.
+* **Eval scorecard signal:** [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) includes `scout_confidence_gate`, which checks that low-confidence Scout decisions go to approval while high-confidence decisions do not accidentally trigger the low-confidence gate.
+* **Phase QA script:** [tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py) gives a simple terminal check with `[PASS]` or `[FAIL]` output for Phase 14.
+
+Use this rule of thumb: pytest proves the confidence gate, while manual QA confirms the approval behavior is understandable to a human operator.
+
+### 6. Outcome KPI Validation
+The outcome document is tested in three practical ways:
+
+* **Token and cost signals:** `latency_seconds`, `token_efficiency`, and telemetry dashboard history prove whether the agent is saving time and tokens compared with the monolithic baseline.
+* **Routing and offload signals:** `routing_accuracy`, `scout_confidence_gate`, and `deterministic_offload_accuracy` prove that Scout decisions route to the right branch and that math/devops prompts use deterministic Python paths.
+* **Security signals:** `pii_redaction_accuracy`, HITL BDD scenarios, and Scout Supervisor tests prove that PII, dangerous requests, and low-confidence routes pause for human review.
+
 ---
 
 ## 📖 Active Gherkin Feature Library
@@ -96,6 +113,12 @@ Feature: Capability Arbitrator Routing
     When the user inputs "Write a python function to compute prime factors."
     Then the prompt is routed to the "coding" capability
     And the final response contains coding instructions or a code block
+
+  Scenario: Math prompt routing
+    Given the Capability Arbitrator is active
+    When the user inputs "What is 2500 multiplied by 4?"
+    Then the prompt is routed to the "math" capability
+    And the final response contains a deterministic math result
 
   Scenario: MCP prompt routing
     Given the Capability Arbitrator is active

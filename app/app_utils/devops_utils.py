@@ -23,7 +23,7 @@ How it works: Scans the target workspace file structure, determines relevant tes
 import os
 import time
 import subprocess
-from typing import Any, AsyncGenerator, List
+from typing import Any, AsyncGenerator
 
 from google.adk.agents.context import Context
 from google.adk.events.event import Event
@@ -34,7 +34,7 @@ from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.telemetry import record_node_execution
 from app.app_utils.config_loader import get_target_dir
 
-def _detect_devops_command(prompt: str, t_dir: str) -> List[str]:
+def _detect_devops_command(prompt: str, t_dir: str) -> list[str]:
     """Helper to detect language/framework and return the correct test/lint command."""
     prompt_lower = prompt.lower()
     is_test = any(w in prompt_lower for w in ["test", "pytest", "run tests", "check tests"])

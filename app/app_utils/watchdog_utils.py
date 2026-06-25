@@ -22,7 +22,7 @@ How it works: Inspects session events for cumulative token counts and elapsed ti
 
 import time
 import os
-from typing import Any, List
+from typing import Any
 from functools import cached_property
 from google import genai
 from google.adk.agents.context import Context
@@ -60,7 +60,7 @@ async def summarize_prior_turns(
     Returns:
         A concise summary string of the conversation history.
     """
-    history_texts: List[str] = []
+    history_texts: list[str] = []
     # Collect texts from all events in the conversation history
     for event in ctx.session.events:
         author = event.author or "unknown"

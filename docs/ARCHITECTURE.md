@@ -8,8 +8,9 @@ The Capability Arbitrator is designed around a **Scout-and-Execute** workflow. T
 ## 📐 The Progressive Disclosure Pattern
 
 To solve the **Context Rot** crisis (where agents are overloaded with hundreds of irrelevant instructions and tools), our architecture breaks execution into two stages:
-1. **Understanding (Intent Classification):** A lightweight, low-latency **Scout** node inspects the user prompt and assigns a capability tag.
-2. **Execution (Task Solving):** The request is routed to a specialized node. The specific Agent Skill (`SKILL.md`) and tools (such as MCP connections) are loaded into memory *only* at the moment of execution.
+1. **Understanding (Intent Classification):** A lightweight, low-latency **Scout** node inspects the user prompt and assigns a capability tag plus a confidence score.
+2. **Confidence Check:** A **Scout Supervisor** checks that confidence score. If the Scout is less than 75% sure, the request pauses for human approval instead of guessing.
+3. **Execution (Task Solving):** The request is routed to a specialized node. The specific Agent Skill (`SKILL.md`) and tools (such as MCP connections) are loaded into memory *only* at the moment of execution.
 
 ---
 
@@ -31,23 +32,23 @@ graph TD
     Supervisor -->|Confidence < 75%| Approval
     Supervisor -->|Confidence >= 75%| Router[5. Router Node]:::system
     
-    Router -->|devops| DevOps[6. DevOps Node]:::branch
-    Router -->|research| Research[7. Research Node]:::branch
-    Router -->|coding| Coding[8. Coding Node]:::branch
-    Router -->|mcp| MCP[9. MCP Node]:::branch
-    Router -->|stride| Stride[10. Stride Node]:::branch
+    Router -->|math| Math[6. Math Node]:::branch
+    Router -->|devops| DevOps[7. DevOps Node]:::branch
+    Router -->|research| Research[8. Research Node]:::branch
+    Router -->|coding| Coding[9. Coding Node]:::branch
+    Router -->|mcp| MCP[10. MCP Node]:::branch
+    Router -->|stride| Stride[11. Stride Node]:::branch
     Router -->|default| Approval
     
-    DevOps --> Watchdog[11. Telemetry Watchdog]:::system
+    Math --> Watchdog[12. Telemetry Watchdog]:::system
+    DevOps --> Watchdog
     Research --> Watchdog
     Coding --> Watchdog
     MCP --> Watchdog
     Stride --> Watchdog
     Approval --> Watchdog
     
-    Watchdog --> Judge[12. Compliance Judge]:::system
-    Judge -->|Violation / Leak| Router
-    Judge -->|Safe| END([13. Safe Return]):::system
+    Watchdog --> END([13. Safe Return]):::system
 ```
 
 ---
@@ -71,33 +72,34 @@ graph LR
 ## 🎛️ Node Topology Directory
 
 
-Our graph contains thirteen distinct execution and monitoring nodes:
+Our active ADK graph contains thirteen distinct execution and monitoring nodes:
 
 ### 1. Inbound Filtration
 *   **Security Screen (1):** A pre-LLM regex filtration layer. It intercepts user inputs to check for GDPR-scoped PII (SSNs, emails, phone numbers, credit cards, IP addresses), routing violations immediately to human approval.
 *   **HITL Approval (2):** A blocking human-in-the-loop gate utilizing ADK `RequestInput` hooks. It pauses the workflow, alerts the dashboard manager, and waits for a manual override response.
 
 ### 2. Intent Classification
-*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It classifies user prompts into capability tags using a structured JSON schema.
-*   **Scout Supervisor (4):** Reviews classification confidence metrics. If the routing model outputs a confidence score under 75%, the request is escalated to the Approval Node.
+*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It is built in [app/app_utils/scout_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_utils.py) and classifies user prompts into capability tags using a structured JSON schema. The schema includes `confidence_score`, which is a 0-100 number showing how sure the Scout is.
+*   **Scout Supervisor (4):** Reviews classification confidence metrics in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py). If the Scout is under 75% confident, the request is escalated to the Approval Node with a short explanation. If the Scout is 75% confident or higher, the request continues to the Router Node.
 *   **Router Node (5):** Evaluates the tag and forwards the prompt context along the correct execution edge.
 
 ### 3. Specialized Execution Nodes
-*   **DevOps Node (6):** A deterministic execution target. It runs local bash commands, tests (via `pytest`), or checkers via subprocesses.
-*   **Research Node (7):** A specialized `LlmAgent` loaded with academic literature-searching instructions and few-shot formatting patterns.
-*   **Coding Node (8):** An `LlmAgent` bound to an MCP filesystem tool, permitting file generation and refactoring in the local workspace.
-*   **MCP Node (9):** A tool-enabled agent focused on filesystem search, file list retrieval, and file index matching.
-*   **Stride Node (10):** A security threat modeling agent that maps architectural components to security threats.
+*   **Math Node (6):** A deterministic execution target built in [app/app_utils/math_node_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/math_node_utils.py). It sends simple arithmetic to Python code, records zero LLM tokens, and returns an exact result.
+*   **DevOps Node (7):** A deterministic execution target. It runs local bash commands, tests (via `pytest`), or checkers via subprocesses.
+*   **Research Node (8):** A specialized `LlmAgent` loaded with academic literature-searching instructions and few-shot formatting patterns.
+*   **Coding Node (9):** An `LlmAgent` bound to an MCP filesystem tool, permitting file generation and refactoring in the local workspace.
+*   **MCP Node (10):** A tool-enabled agent focused on filesystem search, file list retrieval, and file index matching.
+*   **Stride Node (11):** A security threat modeling agent that maps architectural components to security threats.
 
 ### 4. Outbound Quality & Guardrails
-*   **Telemetry Watchdog (11):** Think of this like a helpful watchdog that monitors how much time and money our agent is spending. At the end of every execution, it checks two conditions:
+*   **Telemetry Watchdog (12):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
     1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
     2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
     
     If either budget is exceeded, the watchdog takes two corrective actions:
     - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
     - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
-*   **Compliance Judge (12):** Reviews output text for security risks (e.g. API keys generated in code blocks) and checks factual grounding before sending the response back to the user.
+*   **Safe Return (13):** The normal endpoint after execution and telemetry review. Output judging also exists in the evaluation layer through `OutcomeJudge`, but it is not wired as a live graph node in [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py).
 
 ---
 

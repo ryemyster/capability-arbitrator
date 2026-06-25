@@ -5,6 +5,8 @@ metrics_to_run:
   - latency_seconds
   - token_efficiency
   - pii_redaction_accuracy
+  - scout_confidence_gate
+  - deterministic_offload_accuracy
   - watchdog_recovery_compliance
 
 custom_metrics:
@@ -253,6 +255,109 @@ custom_metrics:
           
           res = json.loads(response.text)
           return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}
+
+  - name: scout_confidence_gate
+    custom_function: |
+      def evaluate(instance):
+          import json
+          import os
+
+          def prompt_to_text(prompt_data):
+              if isinstance(prompt_data, dict):
+                  parts = prompt_data.get("parts") or []
+                  return "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+              return str(prompt_data or "")
+
+          def find_trace_text(agent_data):
+              chunks = []
+              for turn in (agent_data or {}).get("turns", []):
+                  for event in turn.get("events", []):
+                      if event.get("output"):
+                          chunks.append(str(event.get("output")))
+                      content = event.get("content") or {}
+                      for part in content.get("parts") or []:
+                          if isinstance(part, dict) and part.get("text"):
+                              chunks.append(part["text"])
+              return "\n".join(chunks)
+
+          prompt_str = prompt_to_text(instance.get("prompt")).strip().lower()
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json",
+          ]
+          history = []
+          for path in paths:
+              if os.path.exists(path):
+                  try:
+                      with open(path, "r") as f:
+                          history = json.load(f)
+                      if history:
+                          break
+                  except Exception:
+                      continue
+
+          entry = None
+          for item in reversed(history):
+              recorded_prompt = item.get("prompt", "").strip().lower()
+              if prompt_str == recorded_prompt or prompt_str in recorded_prompt or recorded_prompt in prompt_str:
+                  entry = item
+                  break
+
+          trace_text = find_trace_text(instance.get("agent_data")).lower()
+          confidence = float((entry or {}).get("scout_confidence", 100.0))
+          approval_seen = "approval" in trace_text or "human review" in trace_text
+          threshold = 75.0
+
+          if confidence < threshold:
+              score = 1.0 if approval_seen else 0.0
+              explanation = "Low-confidence Scout decision routed to approval." if approval_seen else "Low-confidence Scout decision did not show approval routing."
+          else:
+              score = 1.0 if not ("human review" in trace_text and "below the 75" in trace_text) else 0.0
+              explanation = "High-confidence Scout decision did not trigger the low-confidence approval gate." if score == 1.0 else "High-confidence Scout decision triggered the low-confidence approval gate."
+
+          return {"score": score, "explanation": explanation}
+
+  - name: deterministic_offload_accuracy
+    custom_function: |
+      def evaluate(instance):
+          def prompt_to_text(prompt_data):
+              if isinstance(prompt_data, dict):
+                  parts = prompt_data.get("parts") or []
+                  return "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+              return str(prompt_data or "")
+
+          def trace_to_text(agent_data):
+              chunks = []
+              for turn in (agent_data or {}).get("turns", []):
+                  for event in turn.get("events", []):
+                      route = ((event.get("actions") or {}).get("route") if isinstance(event, dict) else None)
+                      if route:
+                          chunks.append(str(route))
+                      if event.get("output"):
+                          chunks.append(str(event.get("output")))
+                      content = event.get("content") or {}
+                      for part in content.get("parts") or []:
+                          if isinstance(part, dict) and part.get("text"):
+                              chunks.append(part["text"])
+              return "\n".join(chunks).lower()
+
+          prompt = prompt_to_text(instance.get("prompt")).lower()
+          trace = trace_to_text(instance.get("agent_data"))
+          is_math = any(word in prompt for word in ["multiplied by", "divided by", "plus", "minus", "times"])
+          is_devops = any(word in prompt for word in ["pytest", "lint", "quality check", "test suite"])
+
+          if not is_math and not is_devops:
+              return {"score": 1.0, "explanation": "Prompt is not a deterministic offload candidate."}
+
+          if is_math:
+              passed = "math" in trace and ("math engine" in trace or "10000" in trace)
+              explanation = "Math prompt routed to deterministic Math engine." if passed else "Math prompt did not show deterministic Math engine routing."
+              return {"score": 1.0 if passed else 0.0, "explanation": explanation}
+
+          passed = "devops" in trace and ("devops engine" in trace or "pytest" in trace or "exit_code" in trace)
+          explanation = "DevOps prompt routed to deterministic DevOps engine." if passed else "DevOps prompt did not show deterministic DevOps routing."
+          return {"score": 1.0 if passed else 0.0, "explanation": explanation}
 
   - name: watchdog_recovery_compliance
     custom_function: |

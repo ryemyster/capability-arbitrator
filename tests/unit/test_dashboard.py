@@ -30,6 +30,8 @@ def test_dashboard_serve_root() -> None:
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
     assert "Capability Arbitrator" in response.text
+    assert "Token Source" in response.text
+    assert "Run Source" in response.text
 
 def test_dashboard_serve_metrics() -> None:
     """Verifies that the /api/metrics endpoint returns the historical logs list."""

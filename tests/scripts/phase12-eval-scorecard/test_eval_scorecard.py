@@ -31,7 +31,13 @@ def run_scorecard_test() -> None:
         custom_metrics = config.get("custom_metrics", [])
         
         # Check 3: Check registered metrics in metrics_to_run
-        required_metrics = ["latency_seconds", "token_efficiency", "pii_redaction_accuracy"]
+        required_metrics = [
+            "latency_seconds",
+            "token_efficiency",
+            "pii_redaction_accuracy",
+            "scout_confidence_gate",
+            "deterministic_offload_accuracy",
+        ]
         for m in required_metrics:
             assert m in metrics_to_run, f"Metric '{m}' not registered under metrics_to_run"
         print("Sub-test 2 (metrics_to_run verification) [PASS]")
@@ -50,7 +56,13 @@ def run_scorecard_test() -> None:
         eval_cases = dataset.get("eval_cases", [])
         case_ids = [ec.get("eval_case_id") for ec in eval_cases]
         
-        required_cases = ["pii_ssn_routing", "pii_email_routing", "pii_cc_routing", "latency_limit_routing"]
+        required_cases = [
+            "math_routing",
+            "pii_ssn_routing",
+            "pii_email_routing",
+            "pii_cc_routing",
+            "latency_limit_routing",
+        ]
         for c in required_cases:
             assert c in case_ids, f"Required test case '{c}' not found in routing-eval.json"
         print("Sub-test 4 (Dataset case additions verification) [PASS]")

@@ -5,6 +5,23 @@ This document outlines the performance outcomes, core KPIs, and value metrics tr
 
 ---
 
+## Outcome Readiness Matrix
+
+This table answers the practical question: "Can the current architecture actually drive these outcomes?"
+
+| Outcome | Runtime Support | Eval/Test Support | Current Readiness |
+| :--- | :--- | :--- | :--- |
+| **Outcome 1: Context Rot Reduction** | Scout loads a small capability menu, Router loads only the selected branch, and Telemetry Watchdog watches tokens/latency. | `token_efficiency`, `latency_seconds`, `watchdog_recovery_compliance`, and dashboard telemetry. | **Ready.** The system measures token savings and has a budget guardrail. |
+| **Outcome 2: High-Fidelity Routing** | Scout, Scout Supervisor, Router, Math Node, DevOps Node, Coding Node, MCP Node, Research Node, and STRIDE Node. | BDD routing tests plus `routing_accuracy`, `scout_confidence_gate`, and `deterministic_offload_accuracy`. | **Ready.** Closed-form math and devops/linter work now have deterministic paths. |
+| **Outcome 3: Secure Operations** | Security Screen blocks PII before the Scout, Approval Node handles HITL, and Scout Supervisor escalates low-confidence routes. | PII unit/BDD coverage, `pii_redaction_accuracy`, HITL scenario tests, and Scout Supervisor tests. | **Ready for prototype.** Production deployment should still add external audit logging and policy review. |
+
+The simple rule is: every outcome needs three things to count as real:
+1. **A graph behavior** that changes how the agent runs.
+2. **A metric** that measures whether the behavior happened.
+3. **A test or eval** that keeps the behavior from quietly regressing.
+
+---
+
 ## ⚡ Outcome 1: Eradicate "Context Rot" & Maximize the Reasoning Budget
 
 Monolithic agents load all system rules and tool descriptions into memory upfront. This eats up active context, degrades logic reasoning, and increases API costs. The Capability Arbitrator resolves this by loading tools dynamically via **Progressive Disclosure**.
@@ -55,6 +72,7 @@ By routing tasks to dedicated, isolated execution branches, we guarantee that ta
 * **Definition:** The percentage of closed-form tasks (math calculations, linter checks) successfully routed to pure Python code, bypassing LLMs.
 * **Target:** `100%` accuracy on math and linter operations.
 * **Why it matters:** LLMs struggle with precise math and execution loops. Routing closed-form tasks to Python functions guarantees absolute accuracy and eliminates LLM billing.
+* **Current implementation:** The `math` capability routes arithmetic to the deterministic Math Node. The `devops` capability routes test, lint, and quality-check prompts to the deterministic DevOps Node. The scorecard metric `deterministic_offload_accuracy` checks both paths.
 
 ---
 
@@ -78,7 +96,23 @@ Enterprise operations require strict controls around data privacy, ambient permi
 
 ## 🎯 Telemetry Reporting Infrastructure
 
-These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
+These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
+
+The dashboard is intentionally explicit about data provenance:
+
+* **Run source** shows whether the row came from the dashboard playground, Pub/Sub integration, local test runner, or Agent Runtime.
+* **Scout token source** is `actual` when the GenAI SDK reports usage and `estimated` when usage metadata is missing.
+* **Execution token source** is `deterministic_zero` for Math and DevOps offload, `actual` when a node reports tokens, and `estimated` when ADK does not expose downstream LLM node usage.
+* **Monolithic footprint and dollar savings** are baseline estimates used for comparison, not bills from Google Cloud.
+
+The architecture support lives in:
+
+* **Graph routing:** [app/agent.py](app/agent.py)
+* **Scout classification:** [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py)
+* **Confidence gate:** [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py)
+* **Math offload:** [app/app_utils/math_node_utils.py](app/app_utils/math_node_utils.py)
+* **DevOps offload:** [app/app_utils/devops_utils.py](app/app_utils/devops_utils.py)
+* **Eval scorecard:** [tests/eval/eval_config.yaml](tests/eval/eval_config.yaml)
 
 > [!NOTE]
 > **Dashboard Availability:** Run `uv run agents-cli dev` and navigate to `/dashboard` to view these KPIs plotted on visual charts in real-time.

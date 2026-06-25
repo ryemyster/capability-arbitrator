@@ -139,3 +139,16 @@ def check_coding_output(test_context):
         x in combined
         for x in ["def ", "import ", "python", "code", "function", "ready"]
     )
+
+
+@then("the final response contains a deterministic math result")
+def check_math_output(test_context):
+    events = test_context["events"]
+    outputs = []
+    for e in events:
+        if e.output:
+            outputs.append(str(e.output))
+        if e.content and e.content.parts:
+            outputs.extend(part.text for part in e.content.parts if part.text)
+    combined = "\n".join(outputs)
+    assert "Math Engine result: 10000" in combined

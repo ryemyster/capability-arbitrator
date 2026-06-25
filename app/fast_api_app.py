@@ -168,25 +168,33 @@ def get_trace_event(event: Any) -> list[str]:
             traces.append("🧠 Scout Node: Activating low-cost classifier to inspect capability tags...")
         elif route == "approval":
             traces.append("🚨 Security Screen: PII or sensitive operation detected! Workflow routing escalated to approval.")
+        elif route == "continue":
+            traces.append("✅ Scout Supervisor: Confidence is high enough to continue to the router.")
         elif route and route != "safe":
             if route == "devops":
                 traces.append("⚡ Deterministic Offloading: Routing to local DevOps engine (0 LLM tokens, 100% savings).")
+            elif route == "math":
+                traces.append("⚡ Deterministic Offloading: Routing to local Math engine (0 LLM tokens, exact arithmetic).")
             else:
                 traces.append(f"🚀 Execution Node: Routing task to the specialized {route.upper()} executor...")
 
     if hasattr(event, "output") and isinstance(event.output, dict) and "capability_tag" in event.output:
         tag = event.output["capability_tag"]
-        traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}")
+        confidence = event.output.get("confidence_score")
+        confidence_text = f" at {confidence:.1f}% confidence" if isinstance(confidence, (int, float)) else ""
+        traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}{confidence_text}")
         traces.append(f"🔀 Router Node: Progressive disclosure triggered. Swapping out standard prompt and loading specialized instructions/tools for capability: {tag.upper()}")
         if tag == "devops":
             traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic DevOps toolchain.")
+        elif tag == "math":
+            traces.append("Pruned all LLM execution tools/skills. Handed arithmetic off to deterministic Python math.")
         else:
             traces.append("Pruned 4 unused skills/tool sets to prevent context saturation and hallucinatory behavior.")
             
     return traces
 
 
-async def event_generator(prompt: str) -> AsyncGenerator[str, None]:
+async def event_generator(prompt: str, force_local: bool = False) -> AsyncGenerator[str, None]:
     """Generate server-sent events for prompt routing and trace execution."""
     yield f"data: {json.dumps({'type': 'trace', 'text': '🛡️ Security Screen: Scanning user prompt for PII and security threats...'})}\n\n"
     has_exec_node = False
@@ -196,6 +204,7 @@ async def event_generator(prompt: str) -> AsyncGenerator[str, None]:
             message=prompt,
             user_id="dashboard-user",
             session_id="dashboard-session",
+            run_config={"force_local": force_local},
         ):
             # Generate and yield verbose trace events
             for trace_text in get_trace_event(event):
@@ -235,10 +244,7 @@ async def run_agent(request: Request) -> StreamingResponse:
     payload = await request.json()
     prompt: str = payload.get("prompt", "")
 
-    # Enforce local integration test running logic
-    os.environ["INTEGRATION_TEST"] = "TRUE"
-
-    return StreamingResponse(event_generator(prompt), media_type="text/event-stream")
+    return StreamingResponse(event_generator(prompt, force_local=True), media_type="text/event-stream")
 
 
 # Main execution

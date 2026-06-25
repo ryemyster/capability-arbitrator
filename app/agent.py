@@ -19,9 +19,7 @@ Why/How: A progressive disclosure traffic router that assigns tasks to nodes bas
 """
 import os
 import re
-import json
-import time
-from typing import Any, Literal, AsyncGenerator, List
+from typing import Any, AsyncGenerator
 from dotenv import load_dotenv
 
 from google.adk.agents import LlmAgent
@@ -35,84 +33,31 @@ from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from google.adk.workflow import DEFAULT_ROUTE, START, Edge, FunctionNode, Workflow, node
 from mcp import StdioServerParameters
-from pydantic import BaseModel, Field, create_model
 
-from functools import cached_property
-from google import genai
 from google.genai import types
-from google.adk.models.google_llm import Gemini
-from app.config import MODEL
 from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.config_loader import get_target_dir, load_arbitrator_config, load_mcp_configs
 from app.app_utils.devops_utils import devops_fn
+from app.app_utils.math_node_utils import math_fn
+from app.app_utils.scout_utils import build_scout_node
+from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.telemetry import (
     init_telemetry,
     record_security_screen,
-    record_scout,
     record_hitl
 )
 
 load_dotenv()
 
-from app.app_utils.watchdog_utils import global_model, telemetry_watchdog, PROJECT_ID, LOCATION
+from app.app_utils.watchdog_utils import global_model, telemetry_watchdog
 
 # 1. Resolve target workspace CWD and load capabilities configuration
 target_dir = get_target_dir()
 caps = load_arbitrator_config(target_dir)
 mcp_settings = load_mcp_configs(target_dir)
 
-# Build Pydantic model for Scout output dynamically
-cap_tags = [c.tag for c in caps]
-if "approval" not in cap_tags:
-    cap_tags.append("approval")
-
-ScoutOutput = create_model(
-    "ScoutOutput",
-    capability_tag=(
-        Literal[tuple(cap_tags)],  # type: ignore
-        Field(description="The capability required to handle the user's prompt.")
-    )
-)
-
-def _build_scout_instruction() -> str:
-    """Helper to build Scout prompt instructions dynamically."""
-    instr = "You are the 'Scout' node. Assign a capability tag:\n"
-    for cap in caps:
-        instr += f"- '{cap.tag}': {cap.description}.\n"
-    return instr
-
-async def llm_scout_fn(ctx: Context, node_input: Any) -> Event:
-    """The Scout node that determines the required capability tag."""
-    prompt = get_prompt_text(ctx) or (str(node_input) if node_input else "")
-    prompt_lower = prompt.lower()
-    if any(w in prompt_lower for w in ["delete", "drop", "wipe", "destroy"]) and any(w in prompt_lower for w in ["database", "db", "production", "prod", "schema"]):
-        record_scout("approval", 0.0, 0, 0)
-        return Event(output={"capability_tag": "approval"})
-    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
-    start_time = time.time()
-    response = await client.aio.models.generate_content(
-        model=MODEL,
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            system_instruction=_build_scout_instruction(),
-            response_mime_type="application/json",
-            response_schema=ScoutOutput,
-        ),
-    )
-    latency = time.time() - start_time
-    tag = "approval"
-    try:
-        if response.text:
-            tag = json.loads(response.text).get("capability_tag", "approval")
-    except Exception:
-        pass
-    in_tok = response.usage_metadata.prompt_token_count if response.usage_metadata else 0
-    out_tok = response.usage_metadata.candidates_token_count if response.usage_metadata else 0
-    record_scout(tag, latency, in_tok, out_tok)
-    return Event(output={"capability_tag": tag})
-
-llm_scout = FunctionNode(name="llm_scout", func=llm_scout_fn)
+llm_scout = build_scout_node(caps)
 
 def router_node(ctx: Context, node_input: Any) -> Event:
     """Router node to redirect prompt based on Scout output."""
@@ -202,6 +147,7 @@ node_mapping = {
     "coding": coding_node,
     "mcp": mcp_node,
     "devops": devops_fn,
+    "math": math_fn,
     "approval": approval_fn,
 }
 
@@ -237,12 +183,13 @@ def security_screen(node_input: str) -> Event:
     return Event(output=node_input, route="safe")  # type: ignore
 
 
-
 edges = [
     Edge(from_node=START, to_node=security_screen),
     Edge(from_node=security_screen, to_node=llm_scout, route="safe"),
     Edge(from_node=security_screen, to_node=approval_fn, route="approval"),
-    Edge(from_node=llm_scout, to_node=router_fn),
+    Edge(from_node=llm_scout, to_node=scout_supervisor),
+    Edge(from_node=scout_supervisor, to_node=router_fn, route="continue"),
+    Edge(from_node=scout_supervisor, to_node=approval_fn, route="approval"),
 ]
 
 terminal_nodes = []
@@ -255,6 +202,8 @@ for cap in caps:
             target_node = mcp_node
         elif cap.node_type == "devops":
             target_node = devops_fn
+        elif cap.node_type == "math":
+            target_node = math_fn
         else:
             target_node = approval_fn
     

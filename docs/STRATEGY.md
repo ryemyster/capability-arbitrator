@@ -31,18 +31,12 @@ By applying **Progressive Disclosure**, we load a fast classification Scout node
 
 The project is structured into three primary architectural stages:
 
-```
-┌──────────────────────────────────────┐
-│  Phase 1-5: Scaffolding & Playground │ <-- Visual validation of routing and HITL
-└──────────────────┬───────────────────┘
-                   │
-┌──────────────────▼───────────────────┐
-│  Phase 6: Red-Teaming & Deep Testing  │ <-- Dynamic scorecards and outcome judges
-└──────────────────┬───────────────────┘
-                   │
-┌──────────────────▼───────────────────┐
-│  Phase 7: Headless Production Daemon  │ <-- CI/CD integrations and auto-triage
-└──────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A["🏗️ Phase 1–5\nScaffolding & Playground\n(Visual routing validation, HITL debug)"]
+    B["🔴 Phase 6\nRed-Teaming & Deep Testing\n(Dynamic scorecards, LLM-as-a-Judge)"]
+    C["🚀 Phase 7\nHeadless Production Daemon\n(CI/CD auto-triage, GitHub integration)"]
+    A --> B --> C
 ```
 
 ### Milestone Breakdown:

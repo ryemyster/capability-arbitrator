@@ -67,6 +67,66 @@ class AgentEngineApp(AdkApp):
         else:
             self.logger.info(f"Feedback: {feedback_obj.model_dump()}")
 
+    def _save_query_metadata(
+        self,
+        user_id: str,
+        session_id: str | None,
+        run_source: str,
+    ) -> None:
+        """Persist query metadata after the graph has recorded telemetry."""
+        from app.app_utils.telemetry import save_run, update_telemetry
+
+        update_telemetry({
+            "user_id": user_id,
+            "session_id": session_id or "agent-runtime-session",
+            "run_source": run_source,
+        })
+        save_run()
+
+    async def _stream_local_query(
+        self,
+        message: str | dict[str, Any],
+        user_id: str,
+        session_id: str | None,
+        run_source: str,
+    ) -> AsyncGenerator[Any, None]:
+        """Run the graph through an in-memory ADK runner and save telemetry."""
+        from google.adk.runners import InMemoryRunner
+        from google.genai import types
+
+        runner = InMemoryRunner(app=adk_app)
+        session = await runner.session_service.create_session(
+            app_name=adk_app.name,
+            user_id=user_id,
+            session_id=session_id,
+        )
+        msg_str = message if isinstance(message, str) else str(message)
+        try:
+            async for event in runner.run_async(
+                user_id=user_id,
+                session_id=session.id,
+                new_message=types.Content(
+                    role="user", parts=[types.Part.from_text(text=msg_str)]
+                ),
+            ):
+                yield event
+        finally:
+            self._save_query_metadata(user_id, session.id, run_source)
+
+    async def _stream_remote_query(
+        self,
+        query_args: dict[str, Any],
+        user_id: str,
+        session_id: str | None,
+        run_source: str,
+    ) -> AsyncGenerator[Any, None]:
+        """Run the deployed Agent Runtime path and save telemetry."""
+        try:
+            async for event in super().async_stream_query(**query_args):
+                yield event
+        finally:
+            self._save_query_metadata(user_id, session_id, run_source)
+
     async def async_stream_query(
         self,
         *,
@@ -78,44 +138,31 @@ class AgentEngineApp(AdkApp):
         **kwargs,
     ) -> AsyncGenerator[Any, None]:
         """Intercepts streaming query to run locally in integration tests."""
-        from app.app_utils.telemetry import save_run
+        from app.app_utils.telemetry import classify_run_source
 
-        if os.environ.get("INTEGRATION_TEST") == "TRUE":
-            from google.adk.runners import InMemoryRunner
-            from google.genai import types
+        force_local = bool((run_config or {}).get("force_local"))
+        use_local_runner = force_local or os.environ.get("INTEGRATION_TEST") == "TRUE"
+        run_source = classify_run_source(user_id, session_id, force_local)
 
-            runner = InMemoryRunner(app=adk_app)
-            session = await runner.session_service.create_session(
-                app_name=adk_app.name,
-                user_id=user_id,
-                session_id=session_id,
-            )
-            msg_str = message if isinstance(message, str) else str(message)
-            try:
-                async for event in runner.run_async(
-                    user_id=user_id,
-                    session_id=session.id,
-                    new_message=types.Content(
-                        role="user", parts=[types.Part.from_text(text=msg_str)]
-                    ),
-                ):
-                    yield event
-            finally:
-                save_run()
-            return
-
-        try:
-            async for event in super().async_stream_query(
-                message=message,
-                user_id=user_id,
-                session_id=session_id,
-                session_events=session_events,
-                run_config=run_config,
-                **kwargs,
+        if use_local_runner:
+            async for event in self._stream_local_query(
+                message, user_id, session_id, run_source
             ):
                 yield event
-        finally:
-            save_run()
+            return
+
+        query_args = {
+            "message": message,
+            "user_id": user_id,
+            "session_id": session_id,
+            "session_events": session_events,
+            "run_config": run_config,
+            **kwargs,
+        }
+        async for event in self._stream_remote_query(
+            query_args, user_id, session_id, run_source
+        ):
+            yield event
 
     def register_operations(self) -> dict[str, list[str]]:
         """Registers the operations of the Agent."""
