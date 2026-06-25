@@ -12,9 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+File: load_test.py
+Purpose: Runs Locust load tests against a deployed Vertex AI Agent Runtime.
+Why it exists: The project needs an opt-in way to test deployed streaming behavior
+after an operator has created a remote agent runtime.
+How it works: Reads deployment metadata, builds the Agent Runtime stream URL, and
+sends authenticated streaming requests through Locust.
+"""
+
 import json
 import logging
 import os
+from pathlib import Path
 import time
 
 from locust import HttpUser, between, task
@@ -25,9 +35,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def _load_remote_agent_runtime_id() -> str:
+    """Load the deployed Agent Runtime ID from generated metadata."""
+    metadata_path = Path(os.getenv("DEPLOYMENT_METADATA_PATH", "deployment_metadata.json"))
+    if not metadata_path.exists():
+        raise RuntimeError(
+            "Missing deployment_metadata.json. Run the manual deployment first, or copy "
+            "deployment_metadata.example.json to deployment_metadata.json and fill in the "
+            "real Reasoning Engine resource ID."
+        )
+
+    with metadata_path.open(encoding="utf-8") as f:
+        runtime_id = json.load(f).get("remote_agent_runtime_id", "")
+
+    if not runtime_id or runtime_id == "None" or "YOUR_" in runtime_id:
+        raise RuntimeError(
+            "deployment_metadata.json does not contain a real remote_agent_runtime_id."
+        )
+    return runtime_id
+
+
 # Initialize Vertex AI and load agent config
-with open("deployment_metadata.json", encoding="utf-8") as f:
-    remote_agent_runtime_id = json.load(f)["remote_agent_runtime_id"]
+remote_agent_runtime_id = _load_remote_agent_runtime_id()
 
 parts = remote_agent_runtime_id.split("/")
 project_id = parts[1]

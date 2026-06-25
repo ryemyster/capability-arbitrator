@@ -101,9 +101,10 @@ uv run python scripts/agent_quality_check.py
 | **ADK Playground** | `agents-cli playground` | Starts the ADK development UI at `http://127.0.0.1:8080/dev-ui` |
 | **Standalone Dashboard** | `uv run arbitrator dashboard` | Starts the custom telemetry dashboard at `http://127.0.0.1:8000/` |
 | **Unified FastAPI Service** | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000` | Starts ADK web UI, custom dashboard, `/api/run`, `/api/metrics`, and `/pubsub` |
-| **Verify Unit Tests** | `uv run pytest` | Executes standard pytest verification checks |
+| **Verify Tests** | `uv run pytest` | Executes the standard CI verification checks |
 | **Check Quality** | `uv run python scripts/agent_quality_check.py` | Runs AST linting rules |
-| **Cloud Deploy** | `agents-cli deploy` | Deploys the service container to Google Cloud Run |
+| **Clean Generated Artifacts** | `uv run python scripts/cleanup_generated_artifacts.py` | Removes local telemetry, debug files, test outputs, and Python caches |
+| **Cloud Deploy** | `agents-cli deploy` | Manually deploys the ADK agent through the configured Agents CLI path |
 
 ## Local Runtime URLs
 

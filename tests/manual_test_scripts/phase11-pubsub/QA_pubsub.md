@@ -33,7 +33,7 @@ This document outlines the steps to verify the GCP Pub/Sub push notification end
 
 ## Production Deployment Verification
 
-1. Retrieve the deployed Cloud Run service URL (e.g. `https://capability-arbitrator-xyz.a.run.app`).
+1. Retrieve the deployed service URL from the supported ADK deployment path.
 2. Publish a message to your GCP Pub/Sub topic:
    ```bash
    gcloud pubsub topics publish ambient-topic --message='\''{"prompt": "What is 15 plus 30"}'\''

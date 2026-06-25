@@ -33,7 +33,7 @@ uv run agents-cli deploy --project $GOOGLE_CLOUD_PROJECT
 > ```
 
 ### Testing the Deployed Agent
-Once deployed, retrieve the Reasoning Engine resource ID from the output or from `deployment_metadata.json` and test it:
+Once deployed, retrieve the Reasoning Engine resource ID from the output. If you need to run load tests, copy `deployment_metadata.example.json` to `deployment_metadata.json` and fill in the real resource ID. The real `deployment_metadata.json` file is generated/local-only and should not be committed.
 ```bash
 # Query the deployed Agent Runtime remotely
 uv run agents-cli run --url https://us-east1-aiplatform.googleapis.com/v1/projects/$GOOGLE_CLOUD_PROJECT/locations/us-east1/reasoningEngines/<ENGINE_ID> --mode adk "Calculate 50 * 5"
@@ -46,7 +46,8 @@ To delete the deployed Reasoning Engine and stop any potential billing, delete t
 3. Select and delete the resource.
 
 ## Validation Sign-off
-- [ ] Deployment succeeds and generates `deployment_metadata.json`.
+- [ ] Deployment succeeds and provides a real Reasoning Engine resource ID.
+- [ ] Local `deployment_metadata.json` is generated or filled from `deployment_metadata.example.json` for load testing only.
 - [ ] Remote inference via `agents-cli run` successfully reaches the remote graph and returns an answer.
 
 ---

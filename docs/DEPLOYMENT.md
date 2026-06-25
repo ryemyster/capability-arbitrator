@@ -1,80 +1,149 @@
-# Cloud Deployment Guide
-### Containerizing and Deploying the Telemetry Dashboard & Agent API
+# Deployment Guide
+### ADK CLI and Agent Runtime Deployment
 
-This guide outlines how to package and deploy the Capability Arbitrator and its visual dashboard to Google Cloud.
+This project does not use a custom container build as the supported deployment path. The supported path is:
 
----
+1. Validate locally.
+2. Provision Google Cloud identity and Agent Runtime infrastructure when needed.
+3. Deploy intentionally with the ADK / Agents CLI workflow.
 
-## Unified Container Architecture
-
-* **The Problem:** Traditionally, agent deployments split the agent's execution API from its user interface. Managing CORS headers, service accounts, and multiple cloud URLs is an operational headache.
-* **The Solution:** We package the FastAPI telemetry dashboard and the ADK Agent API into a single Docker container. A single Cloud Run service handles both visual dashboard monitoring for developers and API runtimes for CLI clients.
-
-```mermaid
-graph TD
-    classDef default fill:#1e1e24,stroke:#3b3b4f,stroke-width:1px,color:#d4d4d8;
-    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
-    
-    User([User in Browser]) -->|GET /dashboard| CloudRun[Google Cloud Run Service]:::cloud
-    CLI([Agents CLI / Client]) -->|POST /api/run| CloudRun
-    CloudRun -->|FastAPI| AppInstance[fast_api_app.py]:::cloud
-    AppInstance -->|Serve UI| Dashboard[index.html]
-    AppInstance -->|Execute Graph| Scout[Scout Node]
-```
+GitHub Actions do not deploy automatically after tests pass. Production deployment is manual.
 
 ---
 
-## Deployment Instructions
+## Why This Exists
 
-### Step 1: Validate Locally
-Before deploying, verify that the unified app runs locally on your machine:
+The project needs a deployment path that keeps `main` deployable without making every development push deploy to cloud. Unit tests, integration tests, and local smoke checks should catch regressions early. Cloud deployment should happen only when an operator starts it.
+
+This keeps the default developer loop fast and keeps cloud credentials out of normal PR validation.
+
+---
+
+## What Gets Deployed
+
+The deployable runtime is the ADK agent wrapped by [`app/agent_runtime_app.py`](../app/agent_runtime_app.py). Terraform provisions Vertex AI Agent Runtime / Reasoning Engine resources with:
+
+| Setting | Value |
+| :--- | :--- |
+| Entrypoint module | `app.agent_runtime_app` |
+| Entrypoint object | `agent_runtime` |
+| Runtime framework | Google ADK |
+| Requirements file | `app/app_utils/.requirements.txt` |
+
+The local dashboard and unified FastAPI app still exist for development and local smoke testing:
+
+| Surface | Command | URL |
+| :--- | :--- | :--- |
+| Standalone dashboard | `uv run arbitrator dashboard` | `http://127.0.0.1:8000/` |
+| Unified FastAPI service | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000` | `/`, `/dashboard`, `/api/run`, `/api/metrics`, `/pubsub` |
+
+---
+
+## How To Validate Before Deployment
+
+Run the same default test command used by GitHub Actions:
+
 ```bash
-uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
+uv run pytest
 ```
-* **ADK Web UI Root:** Open `http://127.0.0.1:8000/`.
-* **Custom Telemetry Dashboard:** Open `http://127.0.0.1:8000/dashboard`.
-* **Telemetry API:** Call `http://127.0.0.1:8000/api/metrics`.
-* **Streaming Run API:** POST to `http://127.0.0.1:8000/api/run`.
 
-For local dashboard-only work, use:
+The default pytest configuration collects only stable unit and integration tests:
+
+```text
+tests/unit
+tests/integration
+```
+
+Legacy phase scripts under `tests/scripts` are opt-in manual checks and are not part of default pytest collection.
+
+For a local dashboard check:
+
 ```bash
 uv run arbitrator dashboard
 ```
-That standalone app serves the custom dashboard at `http://127.0.0.1:8000/`, not `/dashboard`.
 
-### Step 2: Initialize Infrastructure Scaffolding
-Generate the standard container configurations and Terraform templates required for Google Cloud:
-```bash
-agents-cli scaffold enhance --deployment-target cloud_run
+Open:
+
+```text
+http://127.0.0.1:8000/
 ```
 
-### Step 3: Provision Cloud IAM Policies
-Provision the necessary service accounts, API access permissions, and log storage buckets in your GCP project:
+---
+
+## How To Deploy
+
+Use the manual GitHub workflow when deploying from GitHub:
+
+1. Open the repository in GitHub.
+2. Go to `Actions`.
+3. Select `Manual Cloud Production Deploy`.
+4. Click `Run workflow`.
+5. Approve the `production` environment gate if required.
+
+The workflow uses:
+
 ```bash
-agents-cli infra single-project
+uvx google-agents-cli deploy
 ```
 
-### Step 4: Build and Deploy to Cloud Run
-Build the container image and deploy it live to Google Cloud Run:
+with the configured Google Cloud project, region, service account, and environment variables.
+
+For local operator deployment, use the same ADK / Agents CLI deployment flow after authenticating to Google Cloud:
+
 ```bash
 agents-cli deploy
 ```
 
-> [!NOTE]
-> Upon completion, the CLI will output your live URL (e.g. `https://capability-arbitrator-xyz.a.run.app`). Append `/dashboard` to view the live developer telemetry console.
+---
+
+## Required Configuration
+
+The manual deployment workflow expects GitHub Actions variables and secrets created by the Terraform setup in [`deployment/terraform/cicd`](../deployment/terraform/cicd).
+
+| Name | Type | Purpose |
+| :--- | :--- | :--- |
+| `GCP_PROJECT_NUMBER` | Variable | Builds the Workload Identity Provider path. |
+| `CICD_PROJECT_ID` | Variable | Project used for deployment authentication. |
+| `PROD_PROJECT_ID` | Variable | Production deploy target. |
+| `REGION` | Variable | Google Cloud deployment region. |
+| `APP_SERVICE_ACCOUNT_PROD` | Variable | Runtime service account for production. |
+| `LOGS_BUCKET_NAME_PROD` | Variable | Artifact/log storage used by the runtime. |
+| `WIF_POOL_ID` | Secret | Workload Identity Pool ID. |
+| `WIF_PROVIDER_ID` | Secret | Workload Identity Provider ID. |
+| `GCP_SERVICE_ACCOUNT` | Secret | CI/CD runner service account email. |
+
+See [GitHub Agent Flows and Manual Cloud Setup](CICD_SETUP.md) for the full setup process.
 
 ---
 
-## Deployment Configuration Matrix
+## Deployment Metadata
 
-| Target Option | Purpose | Use-Case | Key Metrics |
-| :--- | :--- | :--- | :--- |
-| **Google Cloud Run (Unified)** | Runs web frontend + agent execution API in one container | Default option for developers needing visual HUDs and API access | Latency, Request count, Container health |
-| **Agent Runtime (Reasoning Engine)** | Headless, model-managed orchestration layer | Backend-only integrations or microservice deployments | Execution latency, Prompt token count |
+`deployment_metadata.json` is a generated local artifact, not source-controlled configuration. It stores the deployed Reasoning Engine resource ID used by optional load tests.
+
+Use the template when you need to run load tests against a deployed runtime:
+
+```bash
+cp deployment_metadata.example.json deployment_metadata.json
+```
+
+Then replace `remote_agent_runtime_id` with the real resource ID from the deployment output.
+
+The real `deployment_metadata.json` file is ignored by git and removed by the generated-artifact cleanup script.
 
 ---
 
-## Resource and Scaling Optimization
+## When To Use Each Surface
 
-> [!TIP]
-> **Scale-to-Zero Billing:** By deploying to Google Cloud Run, instances scale down to 0 when idle. This completely eliminates idle compute charges, significantly reducing operations cost for internal developer tools.
+| Need | Use |
+| :--- | :--- |
+| Catch regressions during development | `uv run pytest` or the `Agent Validation` workflow. |
+| Check dashboard startup and local CLI commands | `Local Runtime Smoke` workflow. |
+| Deploy the ADK agent to Google Cloud | `Manual Cloud Production Deploy` workflow or `agents-cli deploy`. |
+| Work on the local dashboard only | `uv run arbitrator dashboard`. |
+| Work on the unified local FastAPI app | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000`. |
+
+---
+
+## Current Boundary
+
+There is intentionally no supported custom container path in this repository. If a future team wants a separate container deployment, it should be added as a new, tested deployment surface with its own workflow and documentation.

@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Deploy to Production
+name: Manual Cloud Production Deploy
 
 on:
   workflow_dispatch:
-  workflow_call:
 
 jobs:
   deploy:
@@ -76,4 +75,3 @@ jobs:
             --region ${{ vars.REGION }} \
             --service-account=${{ vars.APP_SERVICE_ACCOUNT_PROD }} \
             --update-env-vars="COMMIT_SHA=${{ github.sha }},LOGS_BUCKET_NAME=${{ vars.LOGS_BUCKET_NAME_PROD }}"
-
