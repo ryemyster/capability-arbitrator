@@ -27,9 +27,8 @@ from typing import Any, Dict, List, Optional
 # Global dict to track telemetry metrics for the active request/session
 active_run_telemetry: Dict[str, Any] = {}
 
-DB_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "telemetry_db.json"
-)
+target_dir = os.environ.get("ARBITRATOR_CWD", os.getcwd())
+DB_FILE = os.path.join(target_dir, "telemetry_db.json")
 
 def init_telemetry(prompt: str) -> Dict[str, Any]:
     """Initialize a telemetry recording session for the current prompt."""

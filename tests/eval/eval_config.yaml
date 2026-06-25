@@ -13,7 +13,13 @@ custom_metrics:
           from pydantic import BaseModel, Field
           from dotenv import load_dotenv
           
-          load_dotenv("/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.env")
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
           
           class MetricResult(BaseModel):
               score: float = Field(description="1 if correctly routed, 0 if incorrectly routed")
@@ -56,7 +62,13 @@ custom_metrics:
           from pydantic import BaseModel, Field
           from dotenv import load_dotenv
           
-          load_dotenv("/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.env")
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
           
           class MetricResult(BaseModel):
               score: float = Field(description="integer between 1 and 5 indicating the quality score")

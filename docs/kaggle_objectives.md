@@ -10,13 +10,13 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Uses ADK 2.0 Graph (Workflow)**
     *   *What:* The agent is constructed as a conditional flowchart (nodes and edges) rather than a flat script.
-    *   *Citation:* Completed in [app/agent.py:L197-210](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L197-210) where `root_workflow` is defined.
+    *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined.
 *   **[x] Implements Conditional Branching**
     *   *What:* Dynamic routing based on intent (routing "math" to calculations, "research" to LLM analysis, etc.).
-    *   *Citation:* Completed in [app/agent.py:L115-117](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L115-117) via `router_node` and conditional edges in [L204-209](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L204-209).
+    *   *Citation:* Completed in [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L252-267).
 *   **[x] Includes a Human-in-the-Loop (HITL) Node**
     *   *What:* A state hook that pauses execution for high-risk actions (like deleting databases) to await human permission.
-    *   *Citation:* Completed in [app/agent.py:L127-146](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L127-146) via `approval_node` utilizing `RequestInput`.
+    *   *Citation:* Completed in [app/agent.py:L138-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L138-156) via `approval_node` utilizing `RequestInput` (with auto-grant logic in eval mode).
 
 ### Section B: Specialization (Skills)
 
@@ -25,7 +25,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* Completed in [app/skills/researcher/SKILL.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/SKILL.md) (Specialized academic literature parsing SOP).
 *   **[x] Skill utilizes Progressive Disclosure**
     *   *What:* The system prompt and tools for the skill are only loaded into memory when the capability is selected by the Scout node.
-    *   *Citation:* Completed in [app/agent.py:L152-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L152-156) via `research_node` which loads instructions only at runtime execution.
+    *   *Citation:* Completed in [app/agent.py:L215-223](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L215-223) via loading skill instructions dynamically only at runtime execution.
 *   **[x] Includes Few-Shot Examples in the Skill**
     *   *What:* Providing sample inputs/outputs in the skill folder to guide the LLM's formatting.
     *   *Citation:* Completed in [app/skills/researcher/few_shots.json](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/skills/researcher/few_shots.json) and dynamically appended to the agent's prompt in [app/agent.py:L81-113](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L81-113).
@@ -34,7 +34,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Connects to at least one MCP Server**
     *   *What:* Connects to an external service (a local filesystem MCP server in this case).
-    *   *Citation:* Completed in [app/agent.py:L197-211](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L197-211) via `mcp_node` and [L158-172](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L158-172) via `coding_node`.
+    *   *Citation:* Completed in [app/agent.py:L187-204](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L187-204) via `coding_node` and `mcp_node` tool definitions.
 *   **[x] Agent uses MCP tools**
     *   *What:* The agent queries or modifies the environment using MCP actions (such as listing files or reading files).
     *   *Citation:* Verified by [tests/integration/test_routing_bdd.py:L32-36](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py#L32-36) where workspace file indexing is tested.
@@ -43,7 +43,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Implements a Security Screen**
     *   *What:* Pre-execution regex checking to redact PII (like SSNs) or catch injection attacks. Expanded to support GDPR-scoped items (SSNs, Emails, Phone Numbers, Credit Cards, IP Addresses).
-    *   *Citation:* Completed in [app/agent.py:L230-254](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L230-254) and verified by unit tests in [tests/unit/test_arbitrator.py:L55-84](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py#L55-84).
+    *   *Citation:* Completed in [app/agent.py:L225-244](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L225-244) and verified by unit tests in [tests/unit/test_config_loader.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_config_loader.py).
 *   **[x] Uses a Persistent Context file (`CONTEXT.md`)**
     *   *What:* Permanent baseline rules that govern the agent's runtime instructions.
     *   *Citation:* Completed in [.agents/CONTEXT.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/.agents/CONTEXT.md) and linked in [agents-cli-manifest.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/agents-cli-manifest.yaml).
@@ -77,8 +77,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 *   **[x] (Optional) Uses a FastAPI Manager Dashboard**
     *   *What:* A frontend user interface to monitor and resume paused tasks.
     *   *Citation:* *(Completed: Phase 9 [FastAPI Telemetry Dashboard & HUD] in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and [app/templates/index.html](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/templates/index.html)) -- Enhanced with dynamic token saturation tracking (TSR), tool bloat calculations, and verbose streaming traces matching the outcomes in [docs/OUTCOMES.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/OUTCOMES.md).*
-*   **[ ] Uses Pub/Sub for event-driven "Ambient" triggers**
+*   **[x] Uses Pub/Sub for event-driven "Ambient" triggers**
     *   *What:* Automatically triggers agent runs in response to webhooks or messages.
+    *   *Citation:* *(Completed: Phase 11 [Pub/Sub Event Integration] in [app/fast_api_app.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/fast_api_app.py) and [app/app_utils/routing_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/routing_utils.py))*
 
 ---
 
@@ -86,5 +87,6 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 The following items are still required to achieve a gold-standard project submission:
 
-1.  **Pub/Sub Event Integration** - Tracked in [GitHub Issue #26](https://github.com/ryemyster/capability-arbitrator/issues/26)
+*All objectives are now completed and verified!*
+
 
