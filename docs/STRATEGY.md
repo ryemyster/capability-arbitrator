@@ -52,3 +52,38 @@ This architecture is the culmination of systems-thinking principles applied to A
 * **Context Engine:** Retrieve only the information necessary for the immediate query.
 * **Progressive Loadouts:** Defer loading heavy resources until explicitly required.
 * **Budget Governance:** Strictly monitor and control compute, token, and latency overhead at runtime.
+
+---
+
+## ⚡ 5. Moonshot: Autonomic Self-Healing DevSecOps (Issue #16)
+
+The long-term north-star for the Capability Arbitrator is a fully **autonomic security loop**: the agent audits its own codebase for vulnerabilities, generates a targeted fix, verifies it against the test suite, and opens a pull request — all without human intervention beyond an initial trigger.
+
+### Why this matters
+Most security tooling is passive: it scans, reports, and stops. Developers must still triage the report, write the patch, run tests, and submit a PR. That handoff is where vulnerabilities linger for days or weeks. An autonomic loop collapses that gap to minutes.
+
+### Escalating Autonomy Ladder
+The feature is designed with a conservative four-stage ladder so teams can adopt it incrementally:
+
+| Mode | What it does | Human still needed for |
+| :--- | :--- | :--- |
+| `audit_only` | Runs STRIDE analysis, prints the report | Everything |
+| `propose_patch` | Generates and prints the suggested patch | Review + apply |
+| `apply_patch` | Writes the patch and runs pytest | Review + PR creation |
+| `open_pr` | Full pipeline — patch, verify, git branch, PR | Code review before merge |
+
+### Safety Gates
+* **Disabled by default.** `SELF_HEALING_ENABLED=false` in `.env.example`. No LLM calls, no file writes without opt-in.
+* **GitHub token required** only for `open_pr` mode — local modes never need credentials.
+* **No reading `.env` files.** The `patch_agent` skill explicitly prohibits referencing secret files.
+* **Revert on failure.** If pytest fails after a patch is written, the file is restored before exit.
+* **Manual review gate.** `require_manual_review: true` in config blocks silent merges.
+
+### CLI Trigger
+```bash
+uv run arbitrator stride-heal app/agent.py                         # audit_only (default)
+uv run arbitrator stride-heal app/agent.py --mode apply_patch      # write + verify
+SELF_HEALING_MODE=open_pr uv run arbitrator stride-heal app/agent.py  # full pipeline
+```
+
+Implementation: [`app/app_utils/patch_agent_utils.py`](../app/app_utils/patch_agent_utils.py), [`app/skills/patch_agent/SKILL.md`](../app/skills/patch_agent/SKILL.md), config: [`config/stride_self_healing.yaml`](../config/stride_self_healing.yaml).

@@ -90,6 +90,19 @@ Explore our guides to understand, develop, and deploy the Capability Arbitrator:
 
 ---
 
+---
+
+## 🌙 Moonshot: Autonomic Self-Healing Security
+
+The system can audit its own codebase for vulnerabilities using the STRIDE threat model, generate a targeted security patch, run the test suite to verify it, and open a pull request — all from a single command. See [`docs/STRATEGY.md`](docs/STRATEGY.md) for the full escalating-autonomy design and safety gates.
+
+```bash
+uv run arbitrator stride-heal app/agent.py --mode audit_only   # print STRIDE report
+uv run arbitrator stride-heal app/agent.py --mode apply_patch  # write + verify locally
+```
+
+---
+
 ## 🚀 Quick Start
 
 ### 1. Install CLI

@@ -103,6 +103,77 @@ def _flywheel_write_validate_pr(
         sys.exit(1)
 
 
+def _stride_heal_audit(
+    target: str, config: dict, project_root: str
+) -> tuple[list[dict], str]:
+    """Run STRIDE audit on target; return (findings, raw_report)."""
+    from app.app_utils.patch_agent_utils import run_stride_audit, _parse_findings
+    stride_skill = os.path.join(project_root, "app", "skills", "stride")
+    threshold = config["stride_self_healing"]["detection"]["severity_threshold"]
+    report = run_stride_audit(target, stride_skill)
+    return _parse_findings(report, threshold), report
+
+
+def _stride_heal_patch_loop(
+    finding: dict, target: str, config: dict, project_root: str
+) -> tuple[bool, str]:
+    """Patch-and-verify loop up to max_attempts; return (success, last_output)."""
+    from app.app_utils.patch_agent_utils import generate_patch, apply_patch, verify_patch, revert_file
+    patch_skill = os.path.join(project_root, "app", "skills", "patch_agent")
+    cfg = config["stride_self_healing"]["verification"]
+    commands, max_attempts = cfg["commands"], cfg["max_attempts"]
+    last_out = ""
+    for attempt in range(1, max_attempts + 1):
+        print(f"[StrideHeal] Attempt {attempt}/{max_attempts}...")
+        patch = generate_patch(finding, target, patch_skill)
+        original = apply_patch(patch, target)
+        passed, last_out = verify_patch(commands, project_root)
+        if passed:
+            return True, last_out
+        print("[StrideHeal] Verification failed — reverting.")
+        revert_file(target, original)
+    return False, last_out
+
+
+def _run_stride_heal(target: str, mode: str, dry_run: bool) -> None:
+    """Execute the STRIDE self-healing pipeline."""
+    import pathlib
+    from app.app_utils.patch_agent_utils import load_self_healing_config, create_heal_pr
+
+    project_root = str(pathlib.Path(__file__).parent.parent)
+    config = load_self_healing_config()
+    cfg = config["stride_self_healing"]
+
+    print(f"\n=== STRIDE Self-Heal {'[DRY RUN] ' if dry_run else ''}(mode: {mode}) ===\n")
+    findings, report = _stride_heal_audit(target, config, project_root)
+    print(f"[StrideHeal] Found {len(findings)} actionable finding(s).")
+
+    if not findings or mode == "audit_only":
+        print(report)
+        print("[StrideHeal] Mode=audit_only or no findings. Done.")
+        return
+
+    finding = findings[0]
+    desc_preview = finding["description"][:80]
+    print(f"[StrideHeal] Top: [{finding['severity'].upper()}] {finding['id']} — {desc_preview}")
+
+    if dry_run:
+        cmds = cfg["verification"]["commands"]
+        print(f"\n[DRY RUN] Would patch {finding['id']} and run: {cmds}")
+        return
+
+    if mode in ("propose_patch", "apply_patch", "open_pr"):
+        passed, _ = _stride_heal_patch_loop(finding, target, config, project_root)
+        if not passed:
+            print("[StrideHeal] All attempts failed. No PR opened.")
+            sys.exit(1)
+        print("[StrideHeal] Patch verified.")
+
+    if mode == "open_pr":
+        pr_url = create_heal_pr(finding, target, project_root)
+        print(f"[StrideHeal] PR opened: {pr_url}")
+
+
 def _run_flywheel(window: int, threshold: int, dry_run: bool) -> None:
     """Execute the Quality Flywheel optimization pipeline."""
     import pathlib
@@ -139,42 +210,57 @@ def _run_flywheel(window: int, threshold: int, dry_run: bool) -> None:
     _flywheel_write_validate_pr(tag, few_shots_path, example, project_root, min_accuracy)
 
 
-def main(argv: list[str] | None = None) -> None:
-    """Standard CLI entrypoint handler."""
+def _build_parser() -> argparse.ArgumentParser:
+    """Build and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="Capability Arbitrator: General-purpose developer agent orchestrator."
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True)
 
-    # Subcommand: run
-    run_parser = subparsers.add_parser("run", help="Run the arbitrator on a prompt.")
-    run_parser.add_argument("prompt", type=str, help="The prompt to evaluate and execute.")
+    run_p = sub.add_parser("run", help="Run the arbitrator on a prompt.")
+    run_p.add_argument("prompt", type=str, help="The prompt to evaluate and execute.")
 
-    # Subcommand: dashboard
-    subparsers.add_parser("dashboard", help="Start the local telemetry dashboard.")
+    sub.add_parser("dashboard", help="Start the local telemetry dashboard.")
 
-    # Subcommand: flywheel
-    flywheel_parser = subparsers.add_parser(
+    heal_p = sub.add_parser(
+        "stride-heal",
+        help="STRIDE Self-Healing optimizer (audit → patch → verify → PR).",
+    )
+    heal_p.add_argument("target", type=str, help="Python file to audit and (optionally) patch.")
+    heal_p.add_argument(
+        "--mode", type=str,
+        choices=["audit_only", "propose_patch", "apply_patch", "open_pr"],
+        default=None,
+        help="Override mode from config (default: read from stride_self_healing.yaml).",
+    )
+    heal_p.add_argument("--dry-run", action="store_true",
+                        help="Print plan without writing files or opening a PR.")
+
+    fly_p = sub.add_parser(
         "flywheel",
-        help="Run the Quality Flywheel offline optimizer (detects violations, generates few-shots, opens PR).",
+        help="Quality Flywheel optimizer (detects violations, generates few-shots, opens PR).",
     )
-    flywheel_parser.add_argument(
-        "--window", type=int, default=20, metavar="N",
-        help="Number of telemetry rows to inspect (default: 20).",
-    )
-    flywheel_parser.add_argument(
-        "--threshold", type=int, default=3, metavar="N",
-        help="Violations in window before triggering (default: 3).",
-    )
-    flywheel_parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Print what would change without writing files or opening a PR.",
-    )
+    fly_p.add_argument("--window", type=int, default=20, metavar="N",
+                       help="Telemetry rows to inspect (default: 20).")
+    fly_p.add_argument("--threshold", type=int, default=3, metavar="N",
+                       help="Violations in window before triggering (default: 3).")
+    fly_p.add_argument("--dry-run", action="store_true",
+                       help="Print what would change without writing files or opening a PR.")
 
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Standard CLI entrypoint handler."""
+    args = _build_parser().parse_args(argv)
 
     if args.command == "run":
         run_prompt_sync(args.prompt)
+    elif args.command == "stride-heal":
+        from app.app_utils.patch_agent_utils import load_self_healing_config
+        cfg = load_self_healing_config()
+        mode = args.mode or cfg["stride_self_healing"]["mode"]
+        _run_stride_heal(target=args.target, mode=mode, dry_run=args.dry_run)
     elif args.command == "dashboard":
         from app.dashboard import main as start_dashboard
         start_dashboard()
