@@ -39,6 +39,7 @@ def init_telemetry(prompt: str) -> Dict[str, Any]:
         "pii_detected": False,
         "pii_types": [],
         "scout_tag": "unknown",
+        "scout_confidence": 0.0,
         "scout_latency": 0.0,
         "scout_input_tokens": 0,
         "scout_output_tokens": 0,
@@ -72,10 +73,17 @@ def record_security_screen(pii_detected: bool, pii_types: List[str]) -> None:
         "pii_types": pii_types
     })
 
-def record_scout(tag: str, latency: float, input_tokens: int, output_tokens: int) -> None:
+def record_scout(
+    tag: str,
+    latency: float,
+    input_tokens: int,
+    output_tokens: int,
+    confidence: float = 0.0,
+) -> None:
     """Record Scout intent routing details."""
     update_telemetry({
         "scout_tag": tag,
+        "scout_confidence": confidence,
         "scout_latency": latency,
         "scout_input_tokens": input_tokens,
         "scout_output_tokens": output_tokens

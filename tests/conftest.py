@@ -99,7 +99,7 @@ class MockModelsService:
                 tag = "mcp"
             elif "stride" in prompt_lower:
                 tag = "stride"
-            return json.dumps({"capability_tag": tag})
+            return json.dumps({"capability_tag": tag, "confidence_score": 95.0})
 
         # 3. Non-scout, standard execution node instructions
         system_instruction = ""
@@ -227,4 +227,3 @@ def pytest_collection_modifyitems(config: any, items: list[any]) -> None:
 
         keep.append(item)
     items[:] = keep
-

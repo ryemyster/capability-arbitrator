@@ -8,8 +8,9 @@ The Capability Arbitrator is designed around a **Scout-and-Execute** workflow. T
 ## 📐 The Progressive Disclosure Pattern
 
 To solve the **Context Rot** crisis (where agents are overloaded with hundreds of irrelevant instructions and tools), our architecture breaks execution into two stages:
-1. **Understanding (Intent Classification):** A lightweight, low-latency **Scout** node inspects the user prompt and assigns a capability tag.
-2. **Execution (Task Solving):** The request is routed to a specialized node. The specific Agent Skill (`SKILL.md`) and tools (such as MCP connections) are loaded into memory *only* at the moment of execution.
+1. **Understanding (Intent Classification):** A lightweight, low-latency **Scout** node inspects the user prompt and assigns a capability tag plus a confidence score.
+2. **Confidence Check:** A **Scout Supervisor** checks that confidence score. If the Scout is less than 75% sure, the request pauses for human approval instead of guessing.
+3. **Execution (Task Solving):** The request is routed to a specialized node. The specific Agent Skill (`SKILL.md`) and tools (such as MCP connections) are loaded into memory *only* at the moment of execution.
 
 ---
 
@@ -78,8 +79,8 @@ Our graph contains thirteen distinct execution and monitoring nodes:
 *   **HITL Approval (2):** A blocking human-in-the-loop gate utilizing ADK `RequestInput` hooks. It pauses the workflow, alerts the dashboard manager, and waits for a manual override response.
 
 ### 2. Intent Classification
-*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It classifies user prompts into capability tags using a structured JSON schema.
-*   **Scout Supervisor (4):** Reviews classification confidence metrics. If the routing model outputs a confidence score under 75%, the request is escalated to the Approval Node.
+*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It classifies user prompts into capability tags using a structured JSON schema. The schema now includes `confidence_score`, which is a 0-100 number showing how sure the Scout is.
+*   **Scout Supervisor (4):** Reviews classification confidence metrics in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py). If the Scout is under 75% confident, the request is escalated to the Approval Node with a short explanation. If the Scout is 75% confident or higher, the request continues to the Router Node.
 *   **Router Node (5):** Evaluates the tag and forwards the prompt context along the correct execution edge.
 
 ### 3. Specialized Execution Nodes

@@ -168,6 +168,8 @@ def get_trace_event(event: Any) -> list[str]:
             traces.append("🧠 Scout Node: Activating low-cost classifier to inspect capability tags...")
         elif route == "approval":
             traces.append("🚨 Security Screen: PII or sensitive operation detected! Workflow routing escalated to approval.")
+        elif route == "continue":
+            traces.append("✅ Scout Supervisor: Confidence is high enough to continue to the router.")
         elif route and route != "safe":
             if route == "devops":
                 traces.append("⚡ Deterministic Offloading: Routing to local DevOps engine (0 LLM tokens, 100% savings).")
@@ -176,7 +178,9 @@ def get_trace_event(event: Any) -> list[str]:
 
     if hasattr(event, "output") and isinstance(event.output, dict) and "capability_tag" in event.output:
         tag = event.output["capability_tag"]
-        traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}")
+        confidence = event.output.get("confidence_score")
+        confidence_text = f" at {confidence:.1f}% confidence" if isinstance(confidence, (int, float)) else ""
+        traces.append(f"🎯 Scout Node: Intent classified. Target capability: {tag.upper()}{confidence_text}")
         traces.append(f"🔀 Router Node: Progressive disclosure triggered. Swapping out standard prompt and loading specialized instructions/tools for capability: {tag.upper()}")
         if tag == "devops":
             traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic DevOps toolchain.")

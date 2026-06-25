@@ -13,10 +13,10 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined. *(Completed: Phase 13 [Telemetry Watchdog Node for Runtime Budget Guardrail] in [app/app_utils/watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/watchdog_utils.py))*
 *   **[x] Implements Conditional Branching**
     *   *What:* Dynamic routing based on intent (routing "math" to calculations, "research" to LLM analysis, etc.).
-    *   *Citation:* Completed in [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L252-267).
+    *   *Citation:* Completed in [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L252-267). *(Completed: Phase 14 [Scout Supervisor confidence gate] in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py) and [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py))*
 *   **[x] Includes a Human-in-the-Loop (HITL) Node**
     *   *What:* A state hook that pauses execution for high-risk actions (like deleting databases) to await human permission.
-    *   *Citation:* Completed in [app/agent.py:L138-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L138-156) via `approval_node` utilizing `RequestInput` (with auto-grant logic in eval mode).
+    *   *Citation:* Completed in [app/agent.py:L138-156](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L138-156) via `approval_node` utilizing `RequestInput` (with auto-grant logic in eval mode). *(Completed: Phase 14 [Low-confidence Scout decisions route to HITL approval] in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py))*
 
 ### Section B: Specialization (Skills)
 
@@ -55,13 +55,13 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Uses Gherkin syntax for Behavior-Driven Development (BDD)**
     *   *What:* Natural-language BDD testing scenarios.
-    *   *Citation:* Completed in [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) and resolved in [tests/integration/test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py).
+    *   *Citation:* Completed in [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) and resolved in [tests/integration/test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py). *(Completed: Phase 14 [Mocked Scout confidence support for BDD routing] in [tests/conftest.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/conftest.py))*.
 *   **[x] Provides an Evaluation Scorecard**
     *   *What:* An autonomous validation system that generates traces and evaluates routing outcomes.
     *   *Citation:* Completed via BDD test outcomes and verified in [tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py). *(Completed: Phase 6 [Autonomous Red-Teaming & LLM-as-a-Judge Loop] in [tests/scripts/phase6-deep-testing/test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py))*. *(Completed: Phase 12 [Expanded Evaluation Scorecard Metrics: latency_seconds, token_efficiency, pii_redaction_accuracy] in [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml))*. *(Completed: Phase 13 [Telemetry Watchdog recovery compliance metric and deterministic unit coverage] in [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) and [tests/unit/test_watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_watchdog_utils.py))*.
 *   **[x] Expanded Unit Tests**
     *   *What:* Additional developer-written tests targeting critical utility functions.
-    *   *Citation:* Completed in [tests/unit/test_arbitrator.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py).
+    *   *Citation:* Completed in [tests/unit/test_arbitrator.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py). *(Completed: Phase 14 [Scout Supervisor unit and phase tests] in [tests/unit/test_scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_scout_supervisor_utils.py) and [tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py))*.
 *   **[x] Code passes Automated Linting**
     *   *What:* Running `agents-cli lint` cleanly.
     *   *Citation:* Completed via typing and formatting resolutions in [app/agent_runtime_app.py:L62-108](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent_runtime_app.py#L62-108) and [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py).
@@ -88,4 +88,3 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 The following items are still required to achieve a gold-standard project submission:
 
 *All objectives are now completed and verified!*
-
