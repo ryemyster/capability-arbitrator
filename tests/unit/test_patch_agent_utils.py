@@ -25,7 +25,9 @@ import app.app_utils.patch_agent_utils as pau
 
 # --- Config loading ---
 
-def test_load_defaults_when_no_file(tmp_path):
+def test_load_defaults_when_no_file(monkeypatch, tmp_path):
+    monkeypatch.delenv("STRIDE_SELF_HEALING_ENABLED", raising=False)
+    monkeypatch.delenv("STRIDE_SELF_HEALING_MODE", raising=False)
     pau.load_self_healing_config.cache_clear()
     cfg = pau.load_self_healing_config(str(tmp_path / "missing.yaml"))
     assert cfg["stride_self_healing"]["enabled"] is False
@@ -33,7 +35,9 @@ def test_load_defaults_when_no_file(tmp_path):
     pau.load_self_healing_config.cache_clear()
 
 
-def test_load_merges_yaml_over_defaults(tmp_path):
+def test_load_merges_yaml_over_defaults(monkeypatch, tmp_path):
+    monkeypatch.delenv("STRIDE_SELF_HEALING_ENABLED", raising=False)
+    monkeypatch.delenv("STRIDE_SELF_HEALING_MODE", raising=False)
     pau.load_self_healing_config.cache_clear()
     yaml_file = tmp_path / "stride_self_healing.yaml"
     yaml_file.write_text("stride_self_healing:\n  enabled: true\n  mode: apply_patch\n")
@@ -187,7 +191,8 @@ def test_verify_patch_fails(tmp_path):
 
 # --- GitHub integration flag ---
 
-def test_github_not_required_for_audit_only(tmp_path):
+def test_github_not_required_for_audit_only(monkeypatch, tmp_path):
+    monkeypatch.delenv("STRIDE_SELF_HEALING_MODE", raising=False)
     pau.load_self_healing_config.cache_clear()
     cfg_file = tmp_path / "stride_self_healing.yaml"
     cfg_file.write_text("stride_self_healing:\n  mode: audit_only\n")
