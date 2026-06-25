@@ -14,6 +14,7 @@ Our compliance requirements are categorized into four execution layers:
 | **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L269-273](app/agent.py#L269-273) |
 | | Conditional Branching | Dynamic routing by classification | [app/agent.py:L125-136](app/agent.py#L125-136) |
 | | Security Screen | GDPR PII regex redactor | [app/agent.py:L225-244](app/agent.py#L225-244), [SECURITY.md](docs/SECURITY.md) |
+| | Output Safety Gate | Compliance judge scans outputs for secret leaks, auto-heals | [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py) |
 | | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](.agents/CONTEXT.md) |
 | | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L138-156](app/agent.py#L138-156) |
 | **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](scripts/agent_quality_check.py) |
