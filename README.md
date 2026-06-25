@@ -101,6 +101,16 @@ uv run arbitrator stride-heal app/agent.py --mode audit_only   # print STRIDE re
 uv run arbitrator stride-heal app/agent.py --mode apply_patch  # write + verify locally
 ```
 
+Both moonshot features (STRIDE Self-Healing and Quality Flywheel) support a three-layer runtime surface control:
+
+| Layer | Toggle | Behavior when disabled |
+| :--- | :--- | :--- |
+| **Master** | `enabled: false` in YAML | Complete no-op — no LLM calls, no file writes |
+| **Arbitrator** | `arbitrator.enabled: false` | CLI returns a clear "disabled" message |
+| **Ambient** *(experimental)* | `ambient.enabled: false` | Background observer stays silent |
+
+The **[EXPERIMENTAL] ambient supervisor** implements Google's *ambient agent* pattern: a persistent, event-driven background process that observes every agent transaction and acts autonomously when conditions are met — no human prompt required. Enable per-feature via `config/quality_flywheel.yaml` or `config/stride_self_healing.yaml`. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for design details.
+
 ---
 
 ## 🚀 Quick Start

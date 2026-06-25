@@ -46,8 +46,8 @@ def test_load_merges_yaml_over_defaults(tmp_path):
 
 def test_env_override_enabled(monkeypatch, tmp_path):
     pau.load_self_healing_config.cache_clear()
-    monkeypatch.setenv("SELF_HEALING_ENABLED", "true")
-    monkeypatch.setenv("SELF_HEALING_MODE", "open_pr")
+    monkeypatch.setenv("STRIDE_SELF_HEALING_ENABLED", "true")
+    monkeypatch.setenv("STRIDE_SELF_HEALING_MODE", "open_pr")
     cfg = pau.load_self_healing_config(str(tmp_path / "missing.yaml"))
     assert cfg["stride_self_healing"]["enabled"] is True
     assert cfg["stride_self_healing"]["mode"] == "open_pr"
@@ -56,7 +56,7 @@ def test_env_override_enabled(monkeypatch, tmp_path):
 
 def test_env_override_disabled(monkeypatch, tmp_path):
     pau.load_self_healing_config.cache_clear()
-    monkeypatch.setenv("SELF_HEALING_ENABLED", "false")
+    monkeypatch.setenv("STRIDE_SELF_HEALING_ENABLED", "false")
     cfg = pau.load_self_healing_config(str(tmp_path / "missing.yaml"))
     assert cfg["stride_self_healing"]["enabled"] is False
     pau.load_self_healing_config.cache_clear()

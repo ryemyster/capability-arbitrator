@@ -34,6 +34,8 @@ _SEVERITY_ORDER: dict[str, int] = {"high": 3, "medium": 2, "low": 1}
 _DEFAULTS: dict[str, Any] = {
     "stride_self_healing": {
         "enabled": False,
+        "arbitrator": {"enabled": True},
+        "ambient": {"enabled": False},
         "mode": "audit_only",
         "detection": {
             "severity_threshold": "medium",
@@ -56,15 +58,29 @@ _HEAL_CONFIG_PATH = os.path.join(
 
 
 def _apply_env_overrides(config: dict[str, Any]) -> dict[str, Any]:
-    """Apply SELF_HEALING_* env vars over config values."""
+    """Apply STRIDE_SELF_HEALING_* env vars over config values."""
     section = dict(config.get("stride_self_healing", {}))
-    enabled_env = os.getenv("SELF_HEALING_ENABLED", "").lower()
+    enabled_env = os.getenv("STRIDE_SELF_HEALING_ENABLED", "").lower()
     if enabled_env in ("true", "1", "yes"):
         section["enabled"] = True
     elif enabled_env in ("false", "0", "no"):
         section["enabled"] = False
-    if mode_env := os.getenv("SELF_HEALING_MODE"):
+    if mode_env := os.getenv("STRIDE_SELF_HEALING_MODE"):
         section["mode"] = mode_env
+    arb = dict(section.get("arbitrator", {"enabled": True}))
+    arb_env = os.getenv("STRIDE_SELF_HEALING_ARBITRATOR_ENABLED", "").lower()
+    if arb_env in ("true", "1", "yes"):
+        arb["enabled"] = True
+    elif arb_env in ("false", "0", "no"):
+        arb["enabled"] = False
+    section["arbitrator"] = arb
+    amb = dict(section.get("ambient", {"enabled": False}))
+    amb_env = os.getenv("STRIDE_SELF_HEALING_AMBIENT_ENABLED", "").lower()
+    if amb_env in ("true", "1", "yes"):
+        amb["enabled"] = True
+    elif amb_env in ("false", "0", "no"):
+        amb["enabled"] = False
+    section["ambient"] = amb
     return {**config, "stride_self_healing": section}
 
 
@@ -82,7 +98,12 @@ def load_self_healing_config(path: str | None = None) -> dict[str, Any]:
         return _apply_env_overrides(_DEFAULTS)
     merged: dict[str, Any] = {}
     for section, defaults in _DEFAULTS.items():
-        merged[section] = {**defaults, **(raw.get(section) or {})}
+        raw_section = raw.get(section) or {}
+        merged_section = {**defaults, **raw_section}
+        for key, default_val in defaults.items():
+            if isinstance(default_val, dict) and isinstance(raw_section.get(key), dict):
+                merged_section[key] = {**default_val, **raw_section[key]}
+        merged[section] = merged_section
     return _apply_env_overrides(merged)
 
 

@@ -1,0 +1,12 @@
+# Quality Flywheel — Three-layer surface control
+# [EXPERIMENTAL] Ambient supervisor mode. See docs/ARCHITECTURE.md for design notes.
+# Safe defaults: master disabled, arbitrator on, ambient off.
+# Do not store secrets in this file.
+quality_flywheel:
+  enabled: false           # Master flag — false = complete no-op, overrides all surfaces
+  arbitrator:
+    enabled: true          # Direct CLI surface: `arbitrator flywheel`
+  ambient:
+    enabled: false         # [EXPERIMENTAL] Event-driven background surface
+  mode: observe_only       # observe_only | optimize | open_pr
+  require_manual_review: true
