@@ -52,7 +52,24 @@ graph TD
 
 ---
 
+## 📡 Ambient Event-Driven Pipeline
+
+To support background operations (such as automated pull request triage), the system can be triggered ambiently via Google Cloud Pub/Sub:
+
+```mermaid
+graph LR
+    classDef default fill:#1e1e24,stroke:#3b3b4f,stroke-width:1px,color:#d4d4d8;
+    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
+
+    GitHub[1. GitHub PR Hook] -->|Webhook event| PubSub[2. GCP Pub/Sub Topic]:::cloud
+    PubSub -->|Push Subscription| FastAPI[3. FastAPI /pubsub]:::cloud
+    FastAPI -->|Base64 Decode| Exec[4. Arbitrator Routing Graph]
+```
+
+---
+
 ## 🎛️ Node Topology Directory
+
 
 Our graph contains thirteen distinct execution and monitoring nodes:
 
