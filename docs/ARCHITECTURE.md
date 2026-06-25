@@ -1,223 +1,116 @@
-# System Architecture Blueprint
-### Graph Topology, Routing Flows, and Active Supervisor Nodes
+# System Architecture
+### Capability Routing, Governance, Telemetry, and Opt-In Improvement Loops
 
-The Capability Arbitrator is designed around a **Scout-and-Execute** workflow. This blueprint outlines the active nodes, routing edges, and governance controllers that make up our multi-agent network.
+The Capability Arbitrator is an ADK-based orchestration prototype for routing agent work to the smallest appropriate capability, applying governance gates, and recording execution telemetry. The core runtime graph handles user transactions. Separate opt-in improvement surfaces can review telemetry or source files and suggest changes.
 
----
-
-## 📐 The Progressive Disclosure Pattern
-
-To solve the **Context Rot** crisis (where agents are overloaded with hundreds of irrelevant instructions and tools), our architecture breaks execution into two stages:
-1. **Understanding (Intent Classification):** A lightweight, low-latency **Scout** node inspects the user prompt and assigns a capability tag plus a confidence score.
-2. **Confidence Check:** A **Scout Supervisor** checks that confidence score. If the Scout is less than 75% sure, the request pauses for human approval instead of guessing.
-3. **Execution (Task Solving):** The request is routed to a specialized node. The specific Agent Skill (`SKILL.md`) and tools (such as MCP connections) are loaded into memory *only* at the moment of execution.
+This document is the architecture map. Use the linked reference docs for deeper implementation details.
 
 ---
 
-## 🗺️ System Workflow Diagram
-
-The flowchart below represents the flow of a user transaction through our security, classification, routing, and verification layers:
+## Architecture at a Glance
 
 ```mermaid
 graph TD
-    classDef default fill:#1e1e24,stroke:#3b3b4f,stroke-width:1px,color:#d4d4d8;
-    classDef system fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
-    classDef branch fill:#172554,stroke:#3b82f6,stroke-width:1px,color:#93c5fd;
-    classDef gate fill:#2d0b0b,stroke:#ef4444,stroke-width:1px,color:#fca5a5;
+    classDef runtime fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
+    classDef ops fill:#172554,stroke:#3b82f6,stroke-width:1px,color:#93c5fd;
+    classDef store fill:#1f2937,stroke:#94a3b8,stroke-width:1px,color:#e5e7eb;
 
-    START --> SecScreen[1. Security Screen]:::system
-    SecScreen -->|PII Detected| Approval[2. HITL Approval]:::gate
-    SecScreen -->|Safe| Scout[3. Scout Node]:::system
-    Scout --> Supervisor[4. Scout Supervisor]:::system
-    Supervisor -->|Confidence < 75%| Approval
-    Supervisor -->|Confidence >= 75%| Router[5. Router Node]:::system
-    
-    Router -->|math| Math[6. Math Node]:::branch
-    Router -->|devops| DevOps[7. DevOps Node]:::branch
-    Router -->|research| Research[8. Research Node]:::branch
-    Router -->|coding| Coding[9. Coding Node]:::branch
-    Router -->|mcp| MCP[10. MCP Node]:::branch
-    Router -->|stride| Stride[11. Stride Node]:::branch
-    Router -->|default| Approval
-    
-    Math --> Judge[12. Compliance Judge]:::gate
-    DevOps --> Judge
-    Research --> Judge
-    Coding --> Judge
-    MCP --> Judge
-    Stride --> Judge
-    Approval --> Judge
-
-    Judge -->|Safe| ProductAgent[13. Product Agent]:::system
-    Judge -->|Violation — retry| Router
-
-    ProductAgent --> Watchdog[14. Telemetry Watchdog]:::system
-    Watchdog --> END([15. Safe Return]):::system
+    User[User, API, or Pub/Sub Prompt] --> Graph[Core Runtime Graph]:::runtime
+    Graph --> Telemetry[Telemetry Store]:::store
+    Telemetry --> Dashboard[Live Telemetry Dashboard]:::runtime
+    Telemetry --> Ambient[Optional Ambient Observers]:::ops
+    Operator[Operator, CI, Cron, or Scheduler] --> Commands[Optional Command Workflows]:::ops
+    Commands --> Repo[Verified Local Change or PR]:::store
 ```
+
+The main boundary is simple: **the runtime graph serves user requests; improvement surfaces are opt-in operational workflows around that graph.**
 
 ---
 
-## 🔄 Offline Optimization Loop (Quality Flywheel)
+## Primary Boundaries
 
-The Quality Flywheel is an **autonomic offline optimizer** that runs outside the live agent graph. Think of it like a teacher reviewing exam mistakes after class: it reads recent telemetry violations, writes a better practice example, checks that nothing broke, then raises a pull request.
+| Area | What It Is | Runs Automatically? | Can Write Files or Open PRs Today? | Details |
+| :--- | :--- | :--- | :--- | :--- |
+| Core runtime graph | The live ADK workflow in [`app/agent.py`](../app/agent.py) | Yes, for every graph invocation | No | [Core Runtime Graph](CORE_RUNTIME_GRAPH.md) |
+| STRIDE/Flywheel command surface | Explicit CLI commands run by an operator, CI job, cron job, or scheduler | No, command must be invoked | Yes, when enabled and mode allows it | [Improvement Surfaces](IMPROVEMENT_SURFACES.md) |
+| STRIDE/Flywheel ambient surface | Experimental event-driven observer called after `save_run()` | Yes, but only while the app process is running and telemetry is saved | No, current implementation observes and logs only | [Improvement Surfaces](IMPROVEMENT_SURFACES.md) |
+| Pub/Sub ingress | FastAPI endpoint that converts an event payload into a graph run | Yes, when an external service posts to `/pubsub` | No, it only starts the core graph | [Ambient Triggers](AMBIENT_TRIGGERS.md) |
 
-```
-telemetry_db.json
-       │
-       ▼
-1. DETECT — scan last 20 rows for routing_confidence violations; group by scout_tag
-       │
-       ▼  (if count ≥ 3 for any tag with a few_shots.json)
-2. GENERATE — call Gemini with SKILL.md + existing examples + violation context
-              → produce one new {input, output} few-shot example
-       │
-       ▼
-3. WRITE — append new example to app/skills/<tag>/few_shots.json
-       │
-       ▼
-4. VALIDATE — run phase6 deep-testing script; routing accuracy must be ≥ 60%
-       │
-       ├── FAIL → revert few_shots.json, exit non-zero (no PR)
-       │
-       └── PASS → PR → create branch flywheel/optimize-<tag>-<date>, open PR to develop
-```
-
-**Trigger:**
-```bash
-uv run arbitrator flywheel                # full run
-uv run arbitrator flywheel --dry-run     # print what would change, no writes
-```
-
-All thresholds (window, violation count, validation gate) live in [`config/kpi_config.yaml`](../config/kpi_config.yaml).
-Implementation: [`app/app_utils/flywheel_utils.py`](../app/app_utils/flywheel_utils.py), CLI entry: [`app/cli.py`](../app/cli.py).
+In Google-style ambient-agent language, "ambient" means the system reacts to events in the background instead of waiting for a direct user prompt. In this repository, ambient means **event-driven observation inside the running app process**. It is not a separate continuously running daemon.
 
 ---
 
-## 🩺 Offline Security Loop (STRIDE Self-Healing)
+## Document Map
 
-The STRIDE Self-Healing pipeline is a second **autonomic offline optimizer** that runs outside the live graph. Where the Quality Flywheel improves skill routing, this loop fixes security vulnerabilities: it audits a source file, generates a patch, verifies it, and raises a PR.
-
-```
-target_file.py
-       │
-       ▼
-1. AUDIT   — call STRIDE skill LLM on the file; produce a threat modeling report
-       │
-       ▼  (if medium/high findings exist)
-2. DETECT  — parse Threat Modeling Table; pick the highest-severity finding
-       │
-       ▼  (mode != audit_only)
-3. PATCH   — call patch_agent LLM with vulnerability + code → patched file content
-       │
-       ▼
-4. VERIFY  — run `uv run pytest tests/unit/ -x -q`
-       │
-       ├── FAIL → revert file, retry up to max_attempts, then exit non-zero
-       │
-       └── PASS → (mode == open_pr) create branch stride-heal/<id>-<date>, open PR to develop
-```
-
-**Trigger:**
-```bash
-uv run arbitrator stride-heal <file>                          # uses mode from config
-uv run arbitrator stride-heal <file> --mode audit_only        # report only, no writes
-uv run arbitrator stride-heal <file> --dry-run                # print plan, no writes
-```
-
-Config: [`config/stride_self_healing.yaml`](../config/stride_self_healing.yaml). Implementation: [`app/app_utils/patch_agent_utils.py`](../app/app_utils/patch_agent_utils.py). CLI entry: [`app/cli.py`](../app/cli.py). Skill: [`app/skills/patch_agent/SKILL.md`](../app/skills/patch_agent/SKILL.md).
+| Read This | For This Question |
+| :--- | :--- |
+| [Core Runtime Graph](CORE_RUNTIME_GRAPH.md) | How does a user request move through security screening, Scout classification, routing, compliance checks, KPI audit, and the watchdog? |
+| [Improvement Surfaces](IMPROVEMENT_SURFACES.md) | How do STRIDE Self-Healing and Quality Flywheel work in command mode versus ambient mode? |
+| [Ambient Triggers](AMBIENT_TRIGGERS.md) | How does `/pubsub` receive an external event and start a normal graph run? |
+| [Outcomes](OUTCOMES.md) | What metrics are currently tracked, and which claims are measured, estimated, or experimental? |
+| [Security](SECURITY.md) | How do PII detection, HITL escalation, STRIDE analysis, and self-healing safety gates work? |
+| [Deployment](DEPLOYMENT.md) | How should the system be configured for local, Docker, and deployable environments? |
 
 ---
 
-## 🤖 [EXPERIMENTAL] Ambient Supervisor Layer
-
-The Capability Arbitrator includes an experimental **Ambient Supervisor** layer — two always-on background observers that embody Google's definition of an *ambient agent*: an event-driven AI system that operates continuously in the background, monitoring data streams and taking autonomous action as events occur, rather than waiting for a human prompt.
-
-Think of each supervisor as a **factory manager watching the floor**. The factory (your agent system) runs normally; the manager observes every transaction and silently intervenes when something is off — no ticket, no command required.
-
-Each supervisor is independently toggled via a three-layer config:
-
-```
-Master enabled?        → false: complete no-op (overrides everything)
-  └─ Arbitrator enabled? → false: CLI invocation returns "disabled" message
-  └─ Ambient enabled?    → false: background observer routes "continue" without intervention
-```
-
-**Quality Flywheel ambient supervisor** — After every `save_run()` telemetry write, scans the violation window. If routing-confidence violations exceed the configured threshold, it logs the signal. In `optimize` mode it autonomously generates a corrected few-shot and opens a PR — no human prompt required.
-
-**STRIDE Self-Healing ambient supervisor** — After every `coding` or `stride` tagged agent run, audits the file involved. If STRIDE findings meet the severity threshold, it logs them. In `apply_patch` or `open_pr` mode it autonomously patches and verifies.
-
-**Configuration:**
-- `config/quality_flywheel.yaml` — flywheel surface control (`enabled / arbitrator / ambient / mode`)
-- `config/stride_self_healing.yaml` — STRIDE surface control (same three-layer shape)
-- Env var overrides: `QUALITY_FLYWHEEL_*` and `STRIDE_SELF_HEALING_*` (see `.env.example`)
-
-**Hook point:** Both supervisors are called from `telemetry.py:save_run()` via `on_run_saved()` in `app/app_utils/ambient_supervisor.py`. They never block the main agent flow — all errors are caught and logged.
-
-> **Status:** EXPERIMENTAL. Safe defaults ship disabled (`ambient.enabled: false`). Enable per-feature via config or env var. Do not use in production without testing in `observe_only` / `audit_only` mode first.
-
----
-
-## 📡 Ambient Event-Driven Pipeline
-
-To support background operations (such as automated pull request triage), the system can be triggered ambiently via Google Cloud Pub/Sub:
+## Core Runtime Summary
 
 ```mermaid
-graph LR
-    classDef default fill:#1e1e24,stroke:#3b3b4f,stroke-width:1px,color:#d4d4d8;
-    classDef cloud fill:#0f172a,stroke:#38bdf8,stroke-width:1px,color:#38bdf8;
-
-    GitHub[1. GitHub PR Hook] -->|Webhook event| PubSub[2. GCP Pub/Sub Topic]:::cloud
-    PubSub -->|Push Subscription| FastAPI[3. FastAPI /pubsub]:::cloud
-    FastAPI -->|Base64 Decode| Exec[4. Arbitrator Routing Graph]
+graph TD
+    Start([Prompt]) --> Security[Security Screen]
+    Security -->|safe| Scout[Scout Classifier]
+    Security -->|PII detected| Approval[HITL Approval]
+    Scout --> Supervisor[Confidence Gate]
+    Supervisor -->|continue| Router[Router]
+    Supervisor -->|low confidence| Approval
+    Router --> Capability[Selected Capability Node]
+    Capability --> Compliance[Compliance Judge]
+    Approval --> Compliance
+    Compliance --> KPI[Product KPI Auditor]
+    KPI --> Watchdog[Telemetry Watchdog]
+    Watchdog --> Return([Response])
 ```
 
----
-
-## 🎛️ Node Topology Directory
-
-
-Our active ADK graph contains fifteen distinct execution and monitoring nodes:
-
-### 1. Inbound Filtration
-*   **Security Screen (1):** A pre-LLM regex filtration layer. It intercepts user inputs to check for GDPR-scoped PII (SSNs, emails, phone numbers, credit cards, IP addresses), routing violations immediately to human approval.
-*   **HITL Approval (2):** A blocking human-in-the-loop gate utilizing ADK `RequestInput` hooks. It pauses the workflow, alerts the dashboard manager, and waits for a manual override response.
-
-### 2. Intent Classification
-*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It is built in [app/app_utils/scout_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_utils.py) and classifies user prompts into capability tags using a structured JSON schema. The schema includes `confidence_score`, which is a 0-100 number showing how sure the Scout is.
-*   **Scout Supervisor (4):** Reviews classification confidence metrics in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py). If the Scout is under 75% confident, the request is escalated to the Approval Node with a short explanation. If the Scout is 75% confident or higher, the request continues to the Router Node.
-*   **Router Node (5):** Evaluates the tag and forwards the prompt context along the correct execution edge.
-
-### 3. Specialized Execution Nodes
-*   **Math Node (6):** A deterministic execution target built in [app/app_utils/math_node_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/math_node_utils.py). It sends simple arithmetic to Python code, records zero LLM tokens, and returns an exact result.
-*   **DevOps Node (7):** A deterministic execution target. It runs local bash commands, tests (via `pytest`), or checkers via subprocesses.
-*   **Research Node (8):** A specialized `LlmAgent` loaded with academic literature-searching instructions and few-shot formatting patterns.
-*   **Coding Node (9):** An `LlmAgent` bound to an MCP filesystem tool, permitting file generation and refactoring in the local workspace.
-*   **MCP Node (10):** A tool-enabled agent focused on filesystem search, file list retrieval, and file index matching.
-*   **Stride Node (11):** A security threat modeling agent that maps architectural components to security threats.
-
-### 4. Outbound Quality & Guardrails
-*   **Compliance Judge (12):** Think of this like a spell-checker at the exit door. Before any execution output reaches the user, this node reads it and looks for anything that resembles a password, API key, or secret token. It uses a list of well-known secret fingerprints — AWS access keys, GitHub tokens, private key blocks, bearer tokens, and more — and scans the text using pattern matching (regex). If everything looks clean, the output moves on to the Telemetry Watchdog with a **safe** route. If a secret is found, the judge sends the agent back to redo its work with an **auto-heal prompt** that names the exact type of leak and instructs the model to replace all sensitive values with `<REDACTED>`. This node is implemented in [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py).
-
-*   **Product Agent (13):** Think of this like a quality assurance inspector stationed at the end of the assembly line. After the Compliance Judge clears the output as secret-free, the Product Agent reads the full telemetry record for that transaction and checks it against every KPI contract defined in `docs/OUTCOMES.md`. It verifies five things: (1) the Scout's routing confidence was at least 75%, (2) math and devops tasks burned zero LLM tokens (used deterministic code instead), (3) any PII detection triggered a HITL escalation, (4) the run completed within 30 seconds, and (5) the Capability Arbitrator saved at least 80% of the tokens a monolithic agent would have used. If anything fails, the Product Agent records a named violation and a suggested remediation step — all written back into the telemetry record before `save_run()` persists it, so the eval scorecard can read real runtime KPI verdicts alongside offline scores. This node is implemented in [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py).
-
-*   **Telemetry Watchdog (14):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
-    1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
-    2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
-    
-    If either budget is exceeded, the watchdog takes two corrective actions:
-    - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
-    - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
-*   **Safe Return (15):** The normal endpoint after execution, compliance review, and telemetry monitoring. The `OutcomeJudge` also runs in the evaluation layer for offline grading, but the `ComplianceJudge` is the live runtime safety gate wired directly into the ADK graph in [app/agent.py](app/agent.py).
+The graph constructs available nodes and toolsets at startup. For each request, only the selected routed branch executes. See [Core Runtime Graph](CORE_RUNTIME_GRAPH.md) for the full graph and component inventory.
 
 ---
 
-## ⚙️ Execution Spectrum: Runtime vs. Evals
+## Improvement Surface Summary
 
-To manage a production agentic system, we segment our workloads into four distinct execution environments:
+STRIDE Self-Healing and Quality Flywheel each have two usage surfaces:
 
-| Spectrum | Stage | Scope | Key Tooling |
-| :--- | :--- | :--- | :--- |
-| **Runtime Execution** | Production | Real-time user transaction handling, PII filtering, and capability routing | ADK 2.0 Graph, `FastAPI` |
-| **CI/CD Gates** | Build-Time | Checks pre-commit/pre-push changes for style limits and code regressions | Git hooks, `agent_quality_check.py` |
-| **Runtime Evaluation** | Testing / Validation | Dynamic red-teaming and automated LLM-as-a-judge scorecards | `DeepTester`, `OutcomeJudge` |
-| **Development-Only** | Local Iteration | Interactive command-line prompts and playground visualizers | `agents-cli playground` |
+| Surface | How It Starts | What It Does Today |
+| :--- | :--- | :--- |
+| Command mode | `uv run arbitrator stride-heal <file>` or `uv run arbitrator flywheel` | Can audit, write, verify, and open PRs when explicitly enabled. |
+| Ambient mode | `save_run()` calls the ambient observer after telemetry is persisted | Observes and logs signals only. It does not patch, write few-shots, validate changes, or open PRs today. |
+
+Plain-English rule: **use command mode when you want repository changes; use ambient mode when you want the running app to notice and log signals after normal agent runs.**
+
+See [Improvement Surfaces](IMPROVEMENT_SURFACES.md) for the enablement flags, command diagrams, ambient observer diagram, and current limitations.
+
+---
+
+## Runtime Surfaces
+
+| Surface | Command | URL / Effect |
+| :--- | :--- | :--- |
+| ADK playground | `agents-cli playground` | `http://127.0.0.1:8080/dev-ui` |
+| Standalone dashboard | `uv run arbitrator dashboard` | `http://127.0.0.1:8000/` |
+| Unified FastAPI service | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000` | `/`, `/dashboard`, `/api/run`, `/api/metrics`, `/pubsub` |
+| STRIDE command mode | `uv run arbitrator stride-heal <file>` | Offline audit/patch/verify/PR path when enabled. |
+| Flywheel command mode | `uv run arbitrator flywheel` | Offline telemetry improvement path when enabled. |
+
+In the unified FastAPI service, `/` is the ADK web UI root and `/dashboard` is the custom telemetry dashboard. In the standalone dashboard app, `/` is the custom telemetry dashboard.
+
+---
+
+## Current Implementation Boundaries
+
+| Area | Boundary |
+| :--- | :--- |
+| Ambient mode | Observes and logs only; it does not currently perform the CLI write/patch/PR workflows. |
+| STRIDE ambient target selection | Requires `target_file` in telemetry; most normal graph runs do not currently populate that field. |
+| Pub/Sub | `/pubsub` decodes a prompt and starts the core graph. It does not parse GitHub pull-request diffs by itself. |
+| Flywheel mode label | `QUALITY_FLYWHEEL_MODE` is loaded by config, but the current CLI path does not branch on `observe_only`, `optimize`, or `open_pr`. |
+| Telemetry storage | Uses local `telemetry_db.json`; production storage would need a managed data store and audit policy. |
+| Token savings | Monolithic comparison is a baseline estimate, not a measured cloud bill. |
