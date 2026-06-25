@@ -23,7 +23,6 @@ import argparse
 import asyncio
 import os
 import sys
-from typing import List
 
 def run_prompt_sync(prompt: str) -> None:
     """Run the arbitrator agent locally on the prompt and stream responses."""
@@ -60,7 +59,7 @@ def run_prompt_sync(prompt: str) -> None:
     asyncio.run(_run())
     print()
 
-def main(argv: List[str] | None = None) -> None:
+def main(argv: list[str] | None = None) -> None:
     """Standard CLI entrypoint handler."""
     parser = argparse.ArgumentParser(
         description="Capability Arbitrator: General-purpose developer agent orchestrator."

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Capability Arbitrator - Governance & Telemetry Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-gradient: linear-gradient(135deg, #0b0d19 0%, #06070c 100%);
@@ -27,7 +26,9 @@
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
+            line-height: 1.47;
             background: var(--bg-gradient);
             color: var(--text-main);
             min-height: 100vh;
@@ -35,7 +36,7 @@
         }
 
         header {
-            padding: 2rem 4rem;
+            padding: 1.5rem clamp(1.25rem, 4vw, 4rem);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -48,25 +49,30 @@
         }
 
         header h1 {
-            font-size: 1.8rem;
-            font-weight: 800;
-            letter-spacing: -1px;
+            font-size: 1.625rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
             background: linear-gradient(90deg, #a5b4fc, #6366f1);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
-            font-size: 0.85rem;
+            font-size: 0.8125rem;
             color: var(--text-muted);
+            letter-spacing: -0.01em;
             margin-top: 0.2rem;
         }
 
         .dashboard-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
             gap: 2rem;
-            padding: 3rem 4rem;
+            padding: 2rem clamp(1.25rem, 4vw, 4rem);
+        }
+
+        .dashboard-grid > * {
+            min-width: 0;
         }
 
         .card {
@@ -92,8 +98,9 @@
         }
 
         .card h2 {
-            font-size: 1.25rem;
+            font-size: 1.0625rem;
             font-weight: 600;
+            letter-spacing: -0.015em;
             margin-bottom: 1.5rem;
             display: flex;
             align-items: center;
@@ -102,9 +109,30 @@
 
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 1.5rem;
             margin-bottom: 2rem;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8125rem;
+            gap: 0.5rem;
+        }
+
+        .hud-value {
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            font-weight: 500;
+            color: #ffffff;
+            word-break: break-all;
+            text-align: right;
         }
 
         .stat-box {
@@ -122,8 +150,8 @@
         }
 
         .stat-value {
-            font-size: 2rem;
-            font-weight: 800;
+            font-size: 1.75rem;
+            font-weight: 600;
             margin-bottom: 0.25rem;
             color: #ffffff;
         }
@@ -133,10 +161,10 @@
         }
 
         .stat-label {
-            font-size: 0.8rem;
+            font-size: 0.6875rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.08em;
         }
 
         /* Playground form */
@@ -154,8 +182,8 @@
             border-radius: 12px;
             padding: 1rem;
             color: var(--text-main);
-            font-family: inherit;
-            font-size: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
             resize: none;
             outline: none;
             transition: border-color 0.3s;
@@ -171,7 +199,8 @@
             border: none;
             border-radius: 8px;
             padding: 0.75rem 1.5rem;
-            font-size: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -188,8 +217,8 @@
             background: #020306;
             border: 1px solid var(--panel-border);
             border-radius: 12px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9rem;
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            font-size: 0.8125rem;
             padding: 1.5rem;
             height: 250px;
             overflow-y: auto;
@@ -212,26 +241,14 @@
         }
 
         .hud-title {
-            font-size: 0.9rem;
-            font-weight: 800;
+            font-size: 0.6875rem;
+            font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 0.1em;
             color: var(--accent-primary);
             border-bottom: 1px solid var(--panel-border);
             padding-bottom: 0.5rem;
             margin-bottom: 0.5rem;
-        }
-
-        .hud-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.85rem;
-        }
-
-        .hud-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            color: #ffffff;
         }
 
         .hud-value.glow {
@@ -243,14 +260,17 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
-            font-size: 0.9rem;
+            font-size: 0.8125rem;
         }
 
         th {
             text-align: left;
             padding: 0.75rem 1rem;
             color: var(--text-muted);
+            font-size: 0.75rem;
             font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
             border-bottom: 1px solid var(--panel-border);
         }
 
@@ -267,8 +287,9 @@
             display: inline-block;
             padding: 0.25rem 0.5rem;
             border-radius: 6px;
-            font-size: 0.75rem;
+            font-size: 0.6875rem;
             font-weight: 600;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
         }
 
@@ -303,10 +324,83 @@
             color: var(--text-main);
             cursor: pointer;
             transition: all 0.3s;
+            white-space: nowrap;
         }
 
         .toggle-hud:hover {
             background: var(--accent-primary);
+        }
+
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 2rem clamp(1rem, 3vw, 3rem);
+            }
+
+            #hud-sidebar {
+                order: -1;
+            }
+
+            .hud-overlay {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0 2rem;
+            }
+
+            .hud-title {
+                grid-column: 1 / -1;
+            }
+
+            .progress-bar-container {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem 1.25rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            header h1 {
+                font-size: 1.3rem;
+            }
+
+            .dashboard-grid {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .hud-overlay {
+                grid-template-columns: 1fr;
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.78rem;
+            }
+
+            th, td {
+                padding: 0.5rem 0.6rem;
+            }
         }
     </style>
 </head>
@@ -379,15 +473,15 @@
                 <p style="font-size: 0.85rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 1rem;">
                     Standard agents suffer from <strong>"Context Rot"</strong> (KPI 1.1) by hoarding every tool context (~13,000 baseline tokens). We dynamically load only what is needed, maximizing your reasoning budget.
                 </p>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="two-col" style="margin-bottom: 1rem;">
                     <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15); border-radius: 8px; padding: 0.75rem;">
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #fb7185; text-transform: uppercase; letter-spacing: 0.5px;">Monolithic Prompting (Bloated)</div>
-                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="mono-tsr-val">~10%</span> (Context Rot)</div>
+                        <div style="font-size: 0.6875rem; font-weight: 600; color: #fb7185; text-transform: uppercase; letter-spacing: 0.06em;">Monolithic Prompting (Bloated)</div>
+                        <div style="font-family: 'SF Mono','Monaco','Menlo',ui-monospace,monospace; font-size: 0.8125rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="mono-tsr-val">~10%</span> (Context Rot)</div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Tool Bloat: 100% (5/5 loaded)</div>
                     </div>
                     <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 0.75rem;">
-                        <div style="font-size: 0.75rem; font-weight: 800; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">Capability Arbitrated (Lean)</div>
-                        <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="arb-tsr-val">>85%</span> (Optimal reasoning)</div>
+                        <div style="font-size: 0.6875rem; font-weight: 600; color: #34d399; text-transform: uppercase; letter-spacing: 0.06em;">Capability Arbitrated (Lean)</div>
+                        <div style="font-family: 'SF Mono','Monaco','Menlo',ui-monospace,monospace; font-size: 0.8125rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="arb-tsr-val">>85%</span> (Optimal reasoning)</div>
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Tool Bloat: <span id="arb-bloat-val">0%</span></div>
                     </div>
                 </div>
@@ -401,7 +495,7 @@
                         <span>🎯 LATEST RUN VERIFIED OUTCOMES (OUTCOMES.md)</span>
                         <span id="live-run-route-badge" class="badge"></span>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.8rem;">
+                    <div class="two-col" style="font-size: 0.8rem;">
                         <div>
                             <strong>Context Window Efficiency (KPI 1.1)</strong>
                             <ul style="margin-left: 1.25rem; margin-top: 0.25rem; color: var(--text-muted); line-height: 1.4;">
@@ -428,7 +522,7 @@
                     <textarea id="prompt-input" placeholder="Type a prompt to test routing (e.g. 'Solve (12.5 * 40) / 5' or 'Conduct academic research on quantum computing')"></textarea>
                     <button class="btn-run" onclick="runPrompt()">Execute Prompt</button>
                 </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                <div class="two-col" style="margin-top: 1.5rem;">
                     <div>
                         <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-success); display: flex; align-items: center; gap: 0.25rem;">🤖 Model Response:</div>
                         <div class="terminal" id="terminal-out" style="height: 300px; margin-top: 0;">Response output will stream here...</div>
@@ -461,6 +555,11 @@
                             <!-- Populated dynamically -->
                         </tbody>
                     </table>
+                </div>
+                <div id="history-pagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; gap: 0.5rem;">
+                    <button id="page-prev" onclick="historyChangePage(-1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); color: var(--text-main); border-radius: 6px; padding: 0.375rem 0.75rem; font-size: 0.8125rem; cursor: pointer;">← Prev</button>
+                    <span id="page-info" style="font-size: 0.8125rem; color: var(--text-muted);"></span>
+                    <button id="page-next" onclick="historyChangePage(1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); color: var(--text-main); border-radius: 6px; padding: 0.375rem 0.75rem; font-size: 0.8125rem; cursor: pointer;">Next →</button>
                 </div>
             </div>
         </div>
@@ -582,38 +681,20 @@
             traceDiv.scrollTop = traceDiv.scrollHeight;
         }
 
-        function updateDashboard(history) {
-            if (!history || history.length === 0) return;
+        const HISTORY_PAGE_SIZE = 15;
+        let historyRows = [];
+        let historyPage = 0;
 
-            // Compute totals
-            let totalArbTokens = 0;
-            let totalMonoTokens = 0;
-            let totalCostSaved = 0;
-            let totalScoutTTFT = 0;
-            let piiCount = 0;
-            let hitlCount = 0;
-            let totalMcpCalls = 0;
-            let devopsCount = 0;
-
+        function renderHistoryPage() {
             const tbody = document.getElementById('history-tbody');
             tbody.innerHTML = '';
-
-            history.reverse().forEach(run => {
-                totalArbTokens += run.arbitrator_in_tokens + run.arbitrator_out_tokens;
-                totalMonoTokens += run.monolithic_in_tokens + run.monolithic_out_tokens;
-                totalCostSaved += run.cost_savings_usd || 0;
-                totalScoutTTFT += run.scout_latency || 0;
-                if (run.pii_detected) piiCount++;
-                if (run.hitl_escalated) hitlCount++;
-                totalMcpCalls += run.mcp_tool_calls || 0;
-                if (run.scout_tag === 'math' || run.scout_tag === 'devops') devopsCount++;
-
-                // Add to table
+            const start = historyPage * HISTORY_PAGE_SIZE;
+            const pageItems = historyRows.slice(start, start + HISTORY_PAGE_SIZE);
+            pageItems.forEach(run => {
                 const tr = document.createElement('tr');
                 const date = new Date(run.timestamp * 1000).toLocaleTimeString();
                 const scoutSource = run.scout_token_source || 'unknown';
                 const nodeSource = run.node_token_source || 'unknown';
-                
                 tr.innerHTML = `
                     <td>${date}</td>
                     <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${run.prompt}</td>
@@ -627,21 +708,64 @@
                 `;
                 tbody.appendChild(tr);
             });
+            const totalPages = Math.ceil(historyRows.length / HISTORY_PAGE_SIZE);
+            document.getElementById('page-info').innerText = `Page ${historyPage + 1} of ${totalPages} · ${historyRows.length} runs`;
+            document.getElementById('page-prev').disabled = historyPage === 0;
+            document.getElementById('page-next').disabled = historyPage >= totalPages - 1;
+            document.getElementById('page-prev').style.opacity = historyPage === 0 ? '0.35' : '1';
+            document.getElementById('page-next').style.opacity = historyPage >= totalPages - 1 ? '0.35' : '1';
+        }
+
+        function historyChangePage(delta) {
+            const totalPages = Math.ceil(historyRows.length / HISTORY_PAGE_SIZE);
+            historyPage = Math.max(0, Math.min(historyPage + delta, totalPages - 1));
+            renderHistoryPage();
+        }
+
+        function updateDashboard(history) {
+            if (!history || history.length === 0) return;
+
+            // Compute totals across all items (before capping for display)
+            let totalArbTokens = 0;
+            let totalMonoTokens = 0;
+            let totalCostSaved = 0;
+            let totalScoutTTFT = 0;
+            let piiCount = 0;
+            let hitlCount = 0;
+            let totalMcpCalls = 0;
+            let devopsCount = 0;
+
+            const reversed = history.slice().reverse();
+            reversed.forEach(run => {
+                totalArbTokens += run.arbitrator_in_tokens + run.arbitrator_out_tokens;
+                totalMonoTokens += run.monolithic_in_tokens + run.monolithic_out_tokens;
+                totalCostSaved += run.cost_savings_usd || 0;
+                totalScoutTTFT += run.scout_latency || 0;
+                if (run.pii_detected) piiCount++;
+                if (run.hitl_escalated) hitlCount++;
+                totalMcpCalls += run.mcp_tool_calls || 0;
+                if (run.scout_tag === 'math' || run.scout_tag === 'devops') devopsCount++;
+            });
+
+            // Cap table to last 100 runs
+            historyRows = reversed.slice(0, 100);
+            historyPage = 0;
+            renderHistoryPage();
 
             // Update stats cards
             const savingsRate = totalMonoTokens > 0 ? ((totalMonoTokens - totalArbTokens) / totalMonoTokens) * 100 : 0;
-            const offloadRate = history.length > 0 ? (devopsCount / history.length) * 100 : 0;
+            const offloadRate = reversed.length > 0 ? (devopsCount / reversed.length) * 100 : 0;
 
             document.getElementById('val-total-savings').innerText = savingsRate.toFixed(2) + '%';
             document.getElementById('val-cost-savings').innerText = '$' + totalCostSaved.toFixed(5);
-            document.getElementById('val-avg-scout-ttft').innerText = (totalScoutTTFT / history.length).toFixed(2) + 's';
+            document.getElementById('val-avg-scout-ttft').innerText = (totalScoutTTFT / reversed.length).toFixed(2) + 's';
             document.getElementById('val-offload-rate').innerText = offloadRate.toFixed(2) + '%';
             document.getElementById('val-pii-blocked').innerText = piiCount;
             document.getElementById('val-hitl-escalations').innerText = hitlCount;
             document.getElementById('val-mcp-calls').innerText = totalMcpCalls;
 
             // Load last run into HUD
-            const last = history[0]; // history was reversed, so [0] is the latest
+            const last = reversed[0];
             if (last) {
                 document.getElementById('hud-run-source').innerText = last.run_source || 'unknown';
                 document.getElementById('hud-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';

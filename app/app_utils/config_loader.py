@@ -22,18 +22,18 @@ How it works: Resolves target workspace directory, scans for arbitrator.yaml/jso
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 import yaml
 
 class CapabilityDefinition:
     """Represents a capability tag routing definition."""
-    def __init__(self, tag: str, description: str, node_type: str, target: Optional[str] = None):
+    def __init__(self, tag: str, description: str, node_type: str, target: str | None = None):
         self.tag: str = tag
         self.description: str = description
         self.node_type: str = node_type
-        self.target: Optional[str] = target
+        self.target: str | None = target
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "tag": self.tag,
             "description": self.description,
@@ -45,7 +45,7 @@ def get_target_dir() -> str:
     """Returns the active target directory for execution."""
     return os.path.abspath(os.environ.get("ARBITRATOR_CWD", os.getcwd()))
 
-def load_mcp_configs(target_dir: str) -> Dict[str, Dict[str, Any]]:
+def load_mcp_configs(target_dir: str) -> dict[str, dict[str, Any]]:
     """Scans target_dir for mcp_config.json or .agents-cli and returns MCP configurations."""
     # Search paths for MCP configuration files
     search_files = [
@@ -64,7 +64,7 @@ def load_mcp_configs(target_dir: str) -> Dict[str, Dict[str, Any]]:
                 pass
     return {}
 
-def discover_local_skills(target_dir: str) -> List[str]:
+def discover_local_skills(target_dir: str) -> list[str]:
     """Scans target_dir/.agents/skills/ for custom agent skills directories."""
     skills_dir = os.path.join(target_dir, ".agents", "skills")
     if not os.path.exists(skills_dir):
@@ -80,7 +80,7 @@ def discover_local_skills(target_dir: str) -> List[str]:
             pass
     return []
 
-def _discover_default_caps(target_dir: str) -> List[CapabilityDefinition]:
+def _discover_default_caps(target_dir: str) -> list[CapabilityDefinition]:
     """Helper to dynamically auto-discover capabilities in target_dir."""
     discovered_skills = discover_local_skills(target_dir)
     default_caps = [
@@ -107,12 +107,12 @@ def _discover_default_caps(target_dir: str) -> List[CapabilityDefinition]:
 
     return default_caps
 
-def load_arbitrator_config(target_dir: str) -> List[CapabilityDefinition]:
+def load_arbitrator_config(target_dir: str) -> list[CapabilityDefinition]:
     """Loads capability rules and tag routes from arbitrator.yaml/json or auto-discovers them."""
     yaml_path = os.path.join(target_dir, "arbitrator.yaml")
     json_path = os.path.join(target_dir, "arbitrator.json")
     
-    config_data: Optional[Dict[str, Any]] = None
+    config_data: dict[str, Any] | None = None
     if os.path.exists(yaml_path):
         try:
             with open(yaml_path, "r", encoding="utf-8") as f:

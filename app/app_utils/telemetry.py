@@ -22,15 +22,15 @@ How it works: Uses ContextVar to track current run stats in a thread-safe manner
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Global dict to track telemetry metrics for the active request/session
-active_run_telemetry: Dict[str, Any] = {}
+active_run_telemetry: dict[str, Any] = {}
 
 target_dir = os.environ.get("ARBITRATOR_CWD", os.getcwd())
 DB_FILE = os.path.join(target_dir, "telemetry_db.json")
 
-def init_telemetry(prompt: str) -> Dict[str, Any]:
+def init_telemetry(prompt: str) -> dict[str, Any]:
     """Initialize a telemetry recording session for the current prompt."""
     global active_run_telemetry
     active_run_telemetry = {
@@ -61,20 +61,20 @@ def init_telemetry(prompt: str) -> Dict[str, Any]:
     }
     return active_run_telemetry
 
-def get_current_telemetry() -> Optional[Dict[str, Any]]:
+def get_current_telemetry() -> dict[str, Any] | None:
     """Retrieve the current active request's telemetry dict."""
     global active_run_telemetry
     return active_run_telemetry if active_run_telemetry else None
 
-def update_telemetry(updates: Dict[str, Any]) -> None:
+def update_telemetry(updates: dict[str, Any]) -> None:
     """Apply updates to the active telemetry session."""
     global active_run_telemetry
     if active_run_telemetry:
         active_run_telemetry.update(updates)
 
-def record_security_screen(pii_detected: bool, pii_types: List[str]) -> None:
+def record_security_screen(pii_detected: bool, pii_types: list[str]) -> None:
     """Record PII screen details."""
-    updates: Dict[str, Any] = {
+    updates: dict[str, Any] = {
         "pii_detected": pii_detected,
         "pii_types": pii_types,
     }
@@ -153,7 +153,7 @@ def classify_run_source(user_id: str, session_id: str | None, force_local: bool)
         return "local_test_runner"
     return "agent_runtime"
 
-def _resolve_scout_tokens(run: Dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
+def _resolve_scout_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
     """Return Scout token counts and whether they were measured or estimated."""
     raw_scout_in = run.get("scout_input_tokens") or 0
     raw_scout_out = run.get("scout_output_tokens") or 0
@@ -163,7 +163,7 @@ def _resolve_scout_tokens(run: Dict[str, Any], prompt_tokens: int) -> tuple[int,
     token_source = "actual" if raw_scout_in > 0 or raw_scout_out > 0 else "estimated"
     return raw_scout_in or (prompt_tokens + 1200), raw_scout_out or 50, token_source
 
-def _resolve_node_tokens(run: Dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
+def _resolve_node_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
     """Return execution-node token counts and their provenance label."""
     node_in = run.get("node_input_tokens") or 0
     node_out = run.get("node_output_tokens") or 0
@@ -186,7 +186,7 @@ def _calculate_cost_savings(
     cost_arb = (arbitrator_in * 0.075 / 1e6) + (arbitrator_out * 0.30 / 1e6)
     return max(0.0, cost_mono - cost_arb)
 
-def calculate_savings(run: Dict[str, Any]) -> Dict[str, Any]:
+def calculate_savings(run: dict[str, Any]) -> dict[str, Any]:
     """Calculate token footprint and cost savings against a monolithic baseline.
     Pricing based on standard Gemini 1.5/3.5 Flash:
       - Input: $0.075 / 1,000,000 tokens
@@ -228,7 +228,7 @@ def calculate_savings(run: Dict[str, Any]) -> Dict[str, Any]:
     })
     return run
 
-def save_run() -> Optional[Dict[str, Any]]:
+def save_run() -> dict[str, Any] | None:
     """Calculate final savings and append the run telemetry to local storage."""
     run = get_current_telemetry()
     if not run:
@@ -252,7 +252,7 @@ def save_run() -> Optional[Dict[str, Any]]:
 
     return run
 
-def get_history() -> List[Dict[str, Any]]:
+def get_history() -> list[dict[str, Any]]:
     """Retrieve historical telemetry runs from local JSON database."""
     if not os.path.exists(DB_FILE):
         return []

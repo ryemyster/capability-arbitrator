@@ -96,7 +96,7 @@ Enterprise operations require strict controls around data privacy, ambient permi
 
 ## 🎯 Telemetry Reporting Infrastructure
 
-These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
+These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
 
 The dashboard is intentionally explicit about data provenance:
 
@@ -107,12 +107,12 @@ The dashboard is intentionally explicit about data provenance:
 
 The architecture support lives in:
 
-* **Graph routing:** [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py)
-* **Scout classification:** [app/app_utils/scout_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_utils.py)
-* **Confidence gate:** [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py)
-* **Math offload:** [app/app_utils/math_node_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/math_node_utils.py)
-* **DevOps offload:** [app/app_utils/devops_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/devops_utils.py)
-* **Eval scorecard:** [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml)
+* **Graph routing:** [app/agent.py](app/agent.py)
+* **Scout classification:** [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py)
+* **Confidence gate:** [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py)
+* **Math offload:** [app/app_utils/math_node_utils.py](app/app_utils/math_node_utils.py)
+* **DevOps offload:** [app/app_utils/devops_utils.py](app/app_utils/devops_utils.py)
+* **Eval scorecard:** [tests/eval/eval_config.yaml](tests/eval/eval_config.yaml)
 
 > [!NOTE]
 > **Dashboard Availability:** Run `uv run agents-cli dev` and navigate to `/dashboard` to view these KPIs plotted on visual charts in real-time.
