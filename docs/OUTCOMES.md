@@ -108,6 +108,8 @@ The dashboard is intentionally explicit about data provenance:
 The architecture support lives in:
 
 * **Runtime KPI auditing:** [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) — Product Agent observer node, wired between the Compliance Judge and Telemetry Watchdog. Checks all five KPI thresholds per transaction and writes `outcome_verdicts`, `outcome_violations`, and `outcome_remediation` into the telemetry record before `save_run()` persists it.
+* **Autonomic KPI feedback loop:** [app/app_utils/flywheel_utils.py](app/app_utils/flywheel_utils.py) — Quality Flywheel offline optimizer. Reads `outcome_violations` from `telemetry_db.json`, generates improved few-shot examples for struggling skills via Gemini, validates routing accuracy does not regress, and opens a PR. Triggered via `uv run arbitrator flywheel`. All thresholds configurable in [config/kpi_config.yaml](../config/kpi_config.yaml).
+* **Centralised KPI thresholds:** [config/kpi_config.yaml](../config/kpi_config.yaml) — Single source of truth for all product agent and flywheel thresholds. Changing a value here immediately affects both the live gate and flywheel trigger sensitivity.
 * **Graph routing:** [app/agent.py](app/agent.py)
 * **Scout classification:** [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py)
 * **Confidence gate:** [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py)
