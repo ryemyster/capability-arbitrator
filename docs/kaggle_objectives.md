@@ -68,9 +68,9 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 ### Section F: Deployment & Production
 
-*   **[x] Successfully deployed to Agent Runtime or Cloud Run**
+*   **[x] Successfully configured for Agent Runtime deployment**
     *   *What:* Hosting the agent on Google Cloud so it is live.
-    *   *Citation:* *(Completed: Phase 5 [Remote Cloud Run deployment configuration] in [agents-cli-manifest.yaml](agents-cli-manifest.yaml) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))*
+    *   *Citation:* *(Completed: Phase 5 [Remote Agent Runtime deployment configuration] in [agents-cli-manifest.yaml](agents-cli-manifest.yaml) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md))*
 *   **[x] CI/CD Pipeline (GitHub Actions)**
     *   *What:* Automate testing and deployment using GitHub Actions workflows.
     *   *Citation:* *(Completed: Phase 4 [CI/CD via GitHub Actions] in [.github/workflows/](.github/workflows/))*

@@ -84,7 +84,7 @@ Explore our guides to understand, develop, and deploy the Capability Arbitrator:
 | [Developer Portal](docs/DEVELOPMENT.md) | Local setup, skills development, and MCP configuration | Filesystem MCP servers, AST quality checker, git hooks |
 | [Verification and Testing](docs/TESTING.md) | Quality assurance and evaluation scorecards | BDD Gherkin specs, manual QA script checklists, LLM-as-a-Judge |
 | [Security & Privacy](docs/SECURITY.md) | GDPR PII filtration and STRIDE audits | Regex filtration screen, HITL escalation, threat modeling reports |
-| [Deployment Guide](docs/DEPLOYMENT.md) | Cloud scaling and containerization | FastAPI Dashboard, Google Cloud Run, auto-scaling |
+| [Deployment Guide](docs/DEPLOYMENT.md) | Manual ADK deployment | Agent Runtime, GitHub validation, production deploy gates |
 | [Rubric & Compliance](docs/RUBRIC.md) | Kaggle Capstone alignment and validations | Clickable file/line citations mapping requirements to the codebase |
 
 ---

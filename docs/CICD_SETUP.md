@@ -1,22 +1,27 @@
-# CI/CD Setup
-### GitHub Actions, Google Cloud, and Workload Identity Federation
+# GitHub Agent Flows and Manual Cloud Setup
+### Local Validation, Runtime Smoke Tests, and Optional Google Cloud Deployment
 
-This guide explains how to connect this repository's GitHub Actions workflows to Google Cloud. It is a one-time setup for repository operators.
+This guide explains this repository's GitHub Actions model. The default workflows are **agent validation flows** that run locally on GitHub-hosted runners. They do not deploy to Google Cloud when they finish.
+
+Google Cloud setup is still documented here because the repository keeps a manual production deployment workflow. That deployment must be triggered intentionally.
 
 After setup:
 
-- Pull requests to `develop` run CI checks.
-- Pushes to `develop` that touch application, test, deployment, or `uv.lock` paths deploy to staging.
-- A successful staging deploy calls the production workflow.
-- Production can pause for manual approval if the GitHub `production` environment has required reviewers.
+- Pull requests to `develop` run **Agent Validation**.
+- Pushes to `develop` run **Agent Validation**.
+- Operators can manually run **Local Runtime Smoke** to start the dashboard, check local routes, run CLI commands, and tear everything down.
+- Operators can manually run **Manual Cloud Production Deploy** when cloud deployment is intentionally needed.
+- No workflow automatically deploys after validation completes.
 
 ---
 
 ## Why This Exists
 
-The deployment workflows need permission to deploy to Google Cloud. The unsafe way to do that is to store a long-lived Google Cloud key in GitHub.
+GitHub should first prove that the agent works locally: dependencies install, tests pass, CLI commands run, and the dashboard can start. Those checks should not require cloud credentials.
 
-This repository uses **Workload Identity Federation (WIF)** instead. In plain English, WIF lets GitHub Actions prove its identity to Google Cloud at runtime. Google Cloud then issues a short-lived token for that one workflow run.
+Cloud deployment is a separate operator action. When the manual production deployment workflow runs, it needs permission to deploy to Google Cloud. The unsafe way to do that is to store a long-lived Google Cloud key in GitHub.
+
+This repository uses **Workload Identity Federation (WIF)** for that manual deployment path. In plain English, WIF lets GitHub Actions prove its identity to Google Cloud at runtime. Google Cloud then issues a short-lived token for that one workflow run.
 
 This reduces credential risk because there is no permanent Google Cloud service account key sitting in GitHub secrets.
 
@@ -24,22 +29,22 @@ This reduces credential risk because there is no permanent Google Cloud service 
 
 ## What This Sets Up
 
-The Terraform configuration in [`deployment/terraform/cicd`](../deployment/terraform/cicd) creates and wires these resources:
+The GitHub Actions workflows are:
+
+| Workflow | File | Trigger | Cloud Access? | Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| Agent Validation | [`.github/workflows/pr_checks.yaml`](../.github/workflows/pr_checks.yaml) | Pull request, push to `develop`, or manual run | No | Runs `uv sync --locked`, `uv run pytest`, and safe CLI smoke commands. Pytest is configured to collect stable unit and integration tests by default. The `arbitrator run` smoke prompt intentionally uses the PII route so it stays local and does not call the Scout model. |
+| Local Runtime Smoke | [`.github/workflows/local-runtime-smoke.yaml`](../.github/workflows/local-runtime-smoke.yaml) | Manual run only | No | Starts `uv run python app/dashboard.py`, checks local routes, runs local-safe CLI commands, then tears down the process. |
+| Manual Cloud Production Deploy | [`.github/workflows/deploy-to-prod.yaml`](../.github/workflows/deploy-to-prod.yaml) | Manual run only | Yes | Deploys to production when an operator explicitly starts it. |
+
+The Terraform configuration in [`deployment/terraform/cicd`](../deployment/terraform/cicd) creates and wires the cloud resources needed by the manual deployment path:
 
 | Area | What Gets Created |
 | :--- | :--- |
 | Google Cloud identity | Workload Identity Pool, OIDC provider, CI/CD runner service account, app service accounts. |
 | Google Cloud access | IAM bindings for staging and production deployment. |
-| Storage and telemetry | Logs buckets and telemetry resources used by deploy/load-test workflows. |
+| Storage and telemetry | Logs buckets and telemetry resources. |
 | GitHub Actions settings | Repository variables, repository secrets, and the `production` environment. |
-
-The workflows that use this setup are:
-
-| Workflow | File | Trigger |
-| :--- | :--- | :--- |
-| PR checks | [`.github/workflows/pr_checks.yaml`](../.github/workflows/pr_checks.yaml) | Pull requests into `develop`. |
-| Staging deploy | [`.github/workflows/staging.yaml`](../.github/workflows/staging.yaml) | Pushes to `develop` when relevant paths change. |
-| Production deploy | [`.github/workflows/deploy-to-prod.yaml`](../.github/workflows/deploy-to-prod.yaml) | Called by staging or run manually with `workflow_dispatch`. |
 
 ---
 
@@ -47,10 +52,10 @@ The workflows that use this setup are:
 
 Use this guide when:
 
-- You are setting up CI/CD for a fresh fork or deployment environment.
+- You are setting up GitHub agent validation flows for a fresh fork.
 - GitHub Actions fails at `Authenticate to Google Cloud`.
 - You changed the Google Cloud project IDs, region, repository owner, or repository name.
-- You need to verify that staging and production deploys are using the right service accounts.
+- You need to verify that manual production deployment uses the right service account.
 
 Do not use this guide for local development. Local setup is covered in [Development](DEVELOPMENT.md).
 
@@ -206,30 +211,29 @@ Without this protection rule, the production workflow can run without a manual a
 
 ---
 
-## Step 6: Verify the Pipeline
+## Step 6: Verify the GitHub Agent Flows
 
-Push a small relevant change to `develop`, or re-run a failed workflow.
-
-The staging workflow only runs when one of these paths changes:
-
-```text
-app/**
-data_ingestion/**
-tests/**
-deployment/**
-uv.lock
-```
+Push a small change to a branch with a pull request into `develop`, or run the workflow manually.
 
 Then verify:
 
 1. Open the repository `Actions` tab.
-2. Select `Deploy to Staging`.
-3. Confirm `Authenticate to Google Cloud` has a green check.
-4. Confirm `Deploy to Staging (Agent Runtime)` succeeds.
-5. Confirm the load test runs and writes results to the staging logs bucket.
-6. Confirm the production workflow starts after staging succeeds.
+2. Select `Agent Validation`.
+3. Confirm dependencies install with `uv sync --locked`.
+4. Confirm `uv run pytest` passes.
+5. Confirm the CLI smoke step runs `arbitrator run`, `stride-heal --help`, and `flywheel --help`.
 
-If production approval is enabled, the production workflow should pause at the `production` environment gate.
+To verify the manual runtime smoke flow:
+
+1. Open the repository `Actions` tab.
+2. Select `Local Runtime Smoke`.
+3. Click `Run workflow`.
+4. Confirm the job starts `uv run python app/dashboard.py`.
+5. Confirm the job checks `/` and `/api/metrics`.
+6. Confirm the job runs local arbitrator commands.
+7. Confirm the dashboard process is stopped when the job exits.
+
+Neither flow deploys to Google Cloud.
 
 ---
 
@@ -322,12 +326,14 @@ Then correct `prod_project_id`, `staging_project_id`, or `cicd_runner_project_id
 
 ## Operator Checklist
 
-Before considering CI/CD ready, confirm:
+Before considering GitHub agent flows ready, confirm:
 
 - Terraform apply completed without errors.
 - GitHub Actions secrets and variables exist.
 - The `production` GitHub environment exists.
 - Required reviewers are configured if production needs manual approval.
-- `Deploy to Staging` authenticates to Google Cloud successfully.
-- Staging deployment and load test complete.
-- Production workflow starts only under the approval behavior you expect.
+- `Agent Validation` passes on pull requests.
+- `Agent Validation` passes on pushes to `develop`.
+- `Local Runtime Smoke` passes when manually triggered.
+- `Manual Cloud Production Deploy` runs only when manually triggered.
+- Production deployment uses the approval behavior you expect.

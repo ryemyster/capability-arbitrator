@@ -49,7 +49,7 @@ In Google-style ambient-agent language, "ambient" means the system reacts to eve
 | [Ambient Triggers](AMBIENT_TRIGGERS.md) | How does `/pubsub` receive an external event and start a normal graph run? |
 | [Outcomes](OUTCOMES.md) | What metrics are currently tracked, and which claims are measured, estimated, or experimental? |
 | [Security](SECURITY.md) | How do PII detection, HITL escalation, STRIDE analysis, and self-healing safety gates work? |
-| [Deployment](DEPLOYMENT.md) | How should the system be configured for local, Docker, and deployable environments? |
+| [Deployment](DEPLOYMENT.md) | How should the system be validated locally and deployed manually through ADK tooling? |
 
 ---
 

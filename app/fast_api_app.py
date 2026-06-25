@@ -15,7 +15,7 @@
 """
 File: fast_api_app.py
 Purpose: Exposes a FastAPI application that unifies both the ADK agent endpoints and the custom telemetry dashboard.
-Why it exists: To support a single containerized Cloud Run deployment hosting the dashboard frontend and the ADK execution API.
+Why it exists: To support local dashboard/API development and optional web-service hosting around the ADK graph.
 How it works: Obtains the standard ADK FastAPI app, mounts custom dashboard/telemetry routes, and serves them.
 """
 import json

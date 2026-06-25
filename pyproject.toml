@@ -95,7 +95,8 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 pythonpath = "."
 asyncio_default_fixture_loop_scope = "function"
-norecursedirs = ["tests/load_test"]
+testpaths = ["tests/unit", "tests/integration"]
+norecursedirs = ["tests/load_test", "tests/scripts", "tests/manual_test_scripts"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app","frontend"]

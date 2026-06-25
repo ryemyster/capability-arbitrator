@@ -12,20 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Agent Validation
+name: Local Runtime Smoke
 
 on:
-  pull_request:
-    branches:
-      - develop
-  push:
-    branches:
-      - develop
   workflow_dispatch:
 
 jobs:
-  local-agent-validation:
-    name: Local agent validation
+  dashboard-and-cli-smoke:
+    name: Dashboard and CLI smoke
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,13 +41,27 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Run unit and integration tests
-        run: uv run pytest
-
-      - name: Smoke test arbitrator CLI
+      - name: Start dashboard, verify routes, and run CLI commands
         env:
           INTEGRATION_TEST: "TRUE"
+          PORT: "8000"
+          STRIDE_SELF_HEALING_ENABLED: "false"
+          QUALITY_FLYWHEEL_ENABLED: "false"
         run: |
+          uv run python app/dashboard.py &
+          DASHBOARD_PID=$!
+          trap 'kill "$DASHBOARD_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:8000/ >/dev/null
+          curl -fsS http://127.0.0.1:8000/api/metrics >/dev/null
+
           uv run arbitrator run "My SSN is 123-45-6789"
-          uv run arbitrator stride-heal --help
-          uv run arbitrator flywheel --help
+          uv run arbitrator stride-heal app/agent.py --mode audit_only --dry-run
+          uv run arbitrator flywheel --dry-run

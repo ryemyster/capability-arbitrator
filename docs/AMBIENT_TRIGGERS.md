@@ -51,7 +51,7 @@ To wire this up in production on Google Cloud:
    ```bash
    gcloud pubsub topics create ambient-topic
    ```
-2. **Deploy the FastAPI service** to Cloud Run to get your service URL (e.g. `https://capability-arbitrator-xyz.a.run.app`).
+2. **Deploy the service** through the supported ADK deployment path to get your service URL.
 3. **Create a Push Subscription** pointing to your `/pubsub` endpoint:
    ```bash
    gcloud pubsub subscriptions create ambient-sub \

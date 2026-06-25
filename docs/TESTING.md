@@ -28,10 +28,23 @@ graph TD
 
 | Layer | Execution Mode | Scope & Objectives | How It Runs |
 | :--- | :--- | :--- | :--- |
-| **1. Unit Tests** | Offline (Default) | Validates math helpers, PII screen regexes, config parsing, and file utilities. | `uv run pytest tests/unit` |
-| **2. Graph/BDD Tests** | Offline (Default) | Asserts graph routing rules, progressive disclosure configurations, and HITL interrupts using a mock GenAI SDK harness. | `uv run pytest tests/integration` (excluding E2E) |
-| **3. Server E2E Tests** | Manual (Opt-In) | Verifies FastAPI application socket bindings, SSE stream framing, and real uvicorn startup. | `RUN_E2E=true uv run pytest` |
-| **4. Live Model E2E** | Manual (Opt-In) | Tests real Vertex AI latency, prompt saturation, and actual Gemini API token usage. | `RUN_REAL_LLM=true uv run pytest` |
+| **1. Default CI Tests** | Offline (Default) | Validates unit and integration coverage while excluding legacy phase scripts. | `uv run pytest` |
+| **2. Unit Tests** | Offline | Validates math helpers, PII screen regexes, config parsing, and file utilities. | `uv run pytest tests/unit` |
+| **3. Graph/BDD Tests** | Offline | Asserts graph routing rules, progressive disclosure configurations, and HITL interrupts using a mock GenAI SDK harness. | `uv run pytest tests/integration` (excluding E2E) |
+| **4. Server E2E Tests** | Manual (Opt-In) | Verifies FastAPI application socket bindings, SSE stream framing, and real uvicorn startup. | `RUN_E2E=true uv run pytest tests/integration/test_server_e2e.py` |
+| **5. Live Model E2E** | Manual (Opt-In) | Tests real Vertex AI latency, prompt saturation, and actual Gemini API token usage. | `RUN_REAL_LLM=true uv run pytest tests/integration` |
+
+Before committing or switching branches, remove generated local artifacts with:
+
+```bash
+uv run python scripts/cleanup_generated_artifacts.py
+```
+
+Preview cleanup without deleting anything:
+
+```bash
+uv run python scripts/cleanup_generated_artifacts.py --dry-run
+```
 
 ---
 

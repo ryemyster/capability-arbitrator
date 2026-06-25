@@ -55,6 +55,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.ruff_cache/
+.uv-cache/
 
 # Translations
 *.mo
@@ -193,6 +195,7 @@ Thumbs.db
 .persist_vector_store
 tests/load_test/.results/*.html
 tests/load_test/.results/*.csv
+deployment_metadata.json
 .locust_env
 my_env.tfvars
 .saved_chats
