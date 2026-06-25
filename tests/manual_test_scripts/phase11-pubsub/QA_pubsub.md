@@ -2,6 +2,10 @@
 
 This document outlines the steps to verify the GCP Pub/Sub push notification endpoint `/pubsub` both locally and in production.
 
+> **Agent operation rule:** Do not use raw `gcloud` commands from a coding-agent
+> session. Use `agents-cli` for deployment work, and use the Google Cloud
+> Console or a human-owned infrastructure workflow for Pub/Sub resources.
+
 ## Local Webhook Verification
 
 1. Start the FastAPI application server locally:
@@ -34,10 +38,10 @@ This document outlines the steps to verify the GCP Pub/Sub push notification end
 ## Production Deployment Verification
 
 1. Retrieve the deployed Cloud Run service URL (e.g. `https://capability-arbitrator-xyz.a.run.app`).
-2. Publish a message to your GCP Pub/Sub topic:
-   ```bash
-   gcloud pubsub topics publish ambient-topic --message='\''{"prompt": "What is 15 plus 30"}'\''
-   ```
+2. In the Google Cloud Console or your team's approved infrastructure workflow,
+   publish a test message to the configured Pub/Sub topic.
+   - Topic example: `ambient-topic`
+   - Test message body: `{"prompt": "What is 15 plus 30"}`
 3. Check the Cloud Logging console to verify:
    - The `/pubsub` HTTP request is received with a 200 OK status code.
    - The agent executes routing and returns the correct payload response.

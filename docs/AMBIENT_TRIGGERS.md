@@ -23,6 +23,14 @@ It is a background messaging pipeline:
 
 ## 🛠️ How to Configure and Test (How)
 
+> [!IMPORTANT]
+> **Agent operation rule:** Coding agents working in this repository must not use raw
+> `gcloud` commands for project setup, authentication, quota checks, Pub/Sub
+> provisioning, or deployment. Use the approved `agents-cli` workflow for
+> deployment work, and use the Google Cloud Console or a human-owned
+> infrastructure process for Pub/Sub resources that are not yet covered by
+> `agents-cli`.
+
 ### 1. Trigger the Webhook Locally
 You can test the ambient trigger locally without setting up Google Cloud services by sending a mock Pub/Sub envelope using `curl`:
 
@@ -40,21 +48,29 @@ curl -X POST http://127.0.0.1:8000/pubsub \
 ```
 *Note: The `data` string above is the base64-encoded JSON `{"prompt": "Conduct academic research on quantum computing breakthroughs."}`.*
 
-### 2. Configure GCP Pub/Sub Push Subscription
+### 2. Configure the Production Pub/Sub Push Subscription
 To wire this up in production on Google Cloud:
 
-1. **Create a Pub/Sub Topic:**
+1. **Deploy the FastAPI service** through the project-approved deployment path:
    ```bash
-   gcloud pubsub topics create ambient-topic
+   agents-cli deploy
    ```
-2. **Deploy the FastAPI service** to Cloud Run to get your service URL (e.g. `https://capability-arbitrator-xyz.a.run.app`).
-3. **Create a Push Subscription** pointing to your `/pubsub` endpoint:
-   ```bash
-   gcloud pubsub subscriptions create ambient-sub \
-     --topic=ambient-topic \
-     --push-endpoint=https://capability-arbitrator-xyz.a.run.app/pubsub \
-     --ack-deadline=60
-   ```
+   This produces the Cloud Run service URL, such as
+   `https://capability-arbitrator-xyz.a.run.app`.
+2. **Create or verify the Pub/Sub topic** using the Google Cloud Console or your
+   team's approved infrastructure workflow.
+   - Topic example: `ambient-topic`
+   - Purpose: receives webhook events from GitHub or another event source.
+3. **Create or verify a push subscription** using the Google Cloud Console or the
+   approved infrastructure workflow.
+   - Subscription example: `ambient-sub`
+   - Push endpoint: `https://capability-arbitrator-xyz.a.run.app/pubsub`
+   - Ack deadline: `60` seconds
+4. **Connect the event source** so GitHub or another system publishes the PR
+   event payload into the Pub/Sub topic.
+
+These setup steps are human/operator infrastructure work. They should not be
+performed by a coding agent through raw cloud CLI commands.
 
 ---
 
