@@ -5,6 +5,7 @@ metrics_to_run:
   - latency_seconds
   - token_efficiency
   - pii_redaction_accuracy
+  - watchdog_recovery_compliance
 
 custom_metrics:
   - name: routing_accuracy
@@ -252,3 +253,75 @@ custom_metrics:
           
           res = json.loads(response.text)
           return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}
+
+  - name: watchdog_recovery_compliance
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          total_tokens = 0
+          if entry:
+              total_tokens = (entry.get("scout_input_tokens", 0) + 
+                              entry.get("scout_output_tokens", 0) + 
+                              entry.get("node_input_tokens", 0) + 
+                              entry.get("node_output_tokens", 0))
+          
+          latency = entry.get("total_latency", 0.0) if entry else 0.0
+          exceeded = (total_tokens > 10000) or (latency > 30.0)
+          
+          agent_data = instance.get("agent_data") or {}
+          pruned = False
+          turns = agent_data.get("turns", [])
+          for turn in turns:
+              events = turn.get("events", [])
+              for event in events:
+                  content = event.get("content") or {}
+                  parts = content.get("parts") or []
+                  for p in parts:
+                      text = p.get("text", "")
+                      if "[CONTEXT PRUNED" in text:
+                          pruned = True
+                          break
+                          
+          if exceeded:
+              score = 1.0 if pruned else 0.0
+              explanation = "Pruning triggered correctly for budget violation." if pruned else "Budget violation occurred but pruning was not triggered."
+          else:
+              score = 1.0 if not pruned else 0.0
+              explanation = "Watchdog correctly remained idle for normal case." if not pruned else "Watchdog triggered pruning unnecessarily."
+              
+          return {"score": score, "explanation": explanation}
