@@ -29,6 +29,11 @@ from typing import Any
 
 from google import genai
 
+from app.config import MODEL
+
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
+LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-west1")
+
 _SEVERITY_ORDER: dict[str, int] = {"high": 3, "medium": 2, "low": 1}
 
 _DEFAULTS: dict[str, Any] = {
@@ -108,7 +113,7 @@ def load_self_healing_config(path: str | None = None) -> dict[str, Any]:
 
 
 def run_stride_audit(
-    target_path: str, skill_dir: str, model_name: str = "gemini-2.0-flash"
+    target_path: str, skill_dir: str, model_name: str = MODEL
 ) -> str:
     """Run STRIDE analysis on target_path, return the full audit report."""
     skill_md = os.path.join(skill_dir, "SKILL.md")
@@ -119,7 +124,7 @@ def run_stride_audit(
         f"## Code to Audit\n\n```python\n{code_text}\n```\n\n"
         "Produce the full STRIDE threat modeling report including the Threat Modeling Table."
     )
-    client = genai.Client(vertexai=True)
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
     response = client.models.generate_content(model=model_name, contents=prompt)
     return response.text or ""
 
@@ -150,7 +155,7 @@ def generate_patch(
     finding: dict[str, str],
     target_path: str,
     skill_dir: str,
-    model_name: str = "gemini-2.0-flash",
+    model_name: str = MODEL,
 ) -> str:
     """Call patch_agent LLM with vulnerability context, return patched file content."""
     skill_md = os.path.join(skill_dir, "SKILL.md")
@@ -168,7 +173,7 @@ def generate_patch(
         f"```python\n{code_text}\n```\n\n"
         "Return ONLY the complete patched file content."
     )
-    client = genai.Client(vertexai=True)
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
     response = client.models.generate_content(model=model_name, contents=prompt)
     return response.text or ""
 

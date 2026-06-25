@@ -33,6 +33,11 @@ from typing import Any
 
 from google import genai  # type: ignore[import-not-found]
 
+from app.config import MODEL
+
+PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
+LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-west1")
+
 
 # Skills that have few_shots.json files flywheel can improve.
 _OPTIMIZABLE_TAGS = {"stride", "researcher"}
@@ -113,11 +118,11 @@ def generate_few_shot(
     tag: str,
     skill_dir: str,
     violation_count: int,
-    model_name: str = "gemini-2.0-flash",
+    model_name: str = MODEL,
 ) -> dict[str, str]:
     """Call LLM to produce one new {input, output} few-shot for the named skill."""
     prompt = _build_generation_prompt(skill_dir, violation_count)
-    client = genai.Client(vertexai=True)
+    client = genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
     response = client.models.generate_content(model=model_name, contents=prompt)
     return _parse_llm_example(response.text or "")
 
@@ -215,7 +220,7 @@ def create_pr(tag: str, files_changed: list[str], project_root: str) -> str:
     pr_body = (
         f"## Summary\n"
         f"- Quality Flywheel detected `routing_confidence` violations for the `{tag}` skill\n"
-        f"- Generated one new few-shot example via `gemini-2.0-flash`\n"
+        f"- Generated one new few-shot example via `{MODEL}`\n"
         f"- Validated that routing accuracy did not regress below 60%\n\n"
         f"## Files changed\n"
         + "\n".join(f"- `{f}`" for f in files_changed)

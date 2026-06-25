@@ -1,1 +1,1 @@
-MODEL: str = "gemini-3.1-flash-lite"
+MODEL: str = "gemini-2.5-flash-lite"
