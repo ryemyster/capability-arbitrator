@@ -31,7 +31,12 @@ def run_scorecard_test() -> None:
         custom_metrics = config.get("custom_metrics", [])
         
         # Check 3: Check registered metrics in metrics_to_run
-        required_metrics = ["latency_seconds", "token_efficiency", "pii_redaction_accuracy"]
+        required_metrics = [
+            "latency_seconds",
+            "token_efficiency",
+            "pii_redaction_accuracy",
+            "scout_confidence_gate",
+        ]
         for m in required_metrics:
             assert m in metrics_to_run, f"Metric '{m}' not registered under metrics_to_run"
         print("Sub-test 2 (metrics_to_run verification) [PASS]")

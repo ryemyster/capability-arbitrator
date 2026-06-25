@@ -1,5 +1,5 @@
 import unittest
-from app.math_utils import get_prime_factors
+from app.app_utils.math_utils import get_prime_factors
 
 class TestPrimeFactors(unittest.TestCase):
     def test_get_prime_factors(self):

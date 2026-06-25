@@ -79,7 +79,7 @@ Our graph contains thirteen distinct execution and monitoring nodes:
 *   **HITL Approval (2):** A blocking human-in-the-loop gate utilizing ADK `RequestInput` hooks. It pauses the workflow, alerts the dashboard manager, and waits for a manual override response.
 
 ### 2. Intent Classification
-*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It classifies user prompts into capability tags using a structured JSON schema. The schema now includes `confidence_score`, which is a 0-100 number showing how sure the Scout is.
+*   **Scout Node (3):** Powered by the lightweight `gemini-3.5-flash` model. It is built in [app/app_utils/scout_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_utils.py) and classifies user prompts into capability tags using a structured JSON schema. The schema includes `confidence_score`, which is a 0-100 number showing how sure the Scout is.
 *   **Scout Supervisor (4):** Reviews classification confidence metrics in [app/app_utils/scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/scout_supervisor_utils.py). If the Scout is under 75% confident, the request is escalated to the Approval Node with a short explanation. If the Scout is 75% confident or higher, the request continues to the Router Node.
 *   **Router Node (5):** Evaluates the tag and forwards the prompt context along the correct execution edge.
 
