@@ -39,6 +39,7 @@ from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.config_loader import get_target_dir, load_arbitrator_config, load_mcp_configs
 from app.app_utils.compliance_judge_utils import compliance_judge
+from app.app_utils.product_agent_utils import product_agent
 from app.app_utils.devops_utils import devops_fn
 from app.app_utils.math_node_utils import math_fn
 from app.app_utils.scout_utils import build_scout_node
@@ -224,7 +225,8 @@ if approval_fn not in terminal_nodes:
 for t_node in terminal_nodes:
     edges.append(Edge(from_node=t_node, to_node=compliance_judge))
 
-edges.append(Edge(from_node=compliance_judge, to_node=telemetry_watchdog, route="safe"))
+edges.append(Edge(from_node=compliance_judge, to_node=product_agent, route="safe"))
+edges.append(Edge(from_node=product_agent, to_node=telemetry_watchdog))
 edges.append(Edge(from_node=compliance_judge, to_node=router_fn, route="retry"))
 
 root_workflow = Workflow(

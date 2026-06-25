@@ -107,6 +107,7 @@ The dashboard is intentionally explicit about data provenance:
 
 The architecture support lives in:
 
+* **Runtime KPI auditing:** [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) — Product Agent observer node, wired between the Compliance Judge and Telemetry Watchdog. Checks all five KPI thresholds per transaction and writes `outcome_verdicts`, `outcome_violations`, and `outcome_remediation` into the telemetry record before `save_run()` persists it.
 * **Graph routing:** [app/agent.py](app/agent.py)
 * **Scout classification:** [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py)
 * **Confidence gate:** [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py)
