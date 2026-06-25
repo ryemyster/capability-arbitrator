@@ -114,7 +114,7 @@ def record_hitl(escalated: bool, approved: bool, latency: float) -> None:
 
 def _estimate_node_tokens(node_name: str, prompt_tokens: int) -> tuple[int, int]:
     """Estimate node input and output tokens if not captured."""
-    if node_name == "devops":
+    if node_name in ["devops", "math"]:
         return 0, 0
     if node_name == "research":
         return prompt_tokens + 2500, 1000
@@ -140,7 +140,7 @@ def calculate_savings(run: Dict[str, Any]) -> Dict[str, Any]:
     node_out = run.get("node_output_tokens") or 0
 
     node_name = run.get("node_name", "unknown")
-    if node_in == 0 and node_name != "devops":
+    if node_in == 0 and node_name not in ["devops", "math"]:
         node_in, node_out = _estimate_node_tokens(node_name, prompt_tokens)
 
     # Monolithic baseline loads ALL skills and tools for every single query

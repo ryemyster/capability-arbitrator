@@ -9,6 +9,7 @@ import os
 import sys
 import json
 import subprocess
+import re
 import google.auth
 import google.genai
 
@@ -89,6 +90,8 @@ class MockModelsService:
             prompt_lower = prompt.lower()
             if "pytest" in prompt_lower or "test" in prompt_lower:
                 tag = "devops"
+            elif _looks_like_math_prompt(prompt_lower):
+                tag = "math"
             elif "database" in prompt_lower or "delete" in prompt_lower:
                 tag = "approval"
             elif "academic research" in prompt_lower or "quantum" in prompt_lower:
@@ -175,6 +178,13 @@ class MockGenAIClient:
         self.models = MockModelsService(self, is_async=False)
         self.aio = MockAioService(self)
         self.vertexai = True
+
+def _looks_like_math_prompt(prompt_lower: str) -> bool:
+    """Return True when a prompt looks like arithmetic, not code-writing."""
+    math_words = ["multiplied by", "divided by", "plus", "minus", "times"]
+    if any(word in prompt_lower for word in math_words):
+        return True
+    return bool(re.search(r"\d+\s*[+\-*/]\s*\d+", prompt_lower))
 
 # Mock GCP credentials helper
 class MockCredentials:

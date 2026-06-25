@@ -71,6 +71,13 @@ The Scout Supervisor is also a runtime guardrail. It checks whether the Scout is
 
 Use this rule of thumb: pytest proves the confidence gate, while manual QA confirms the approval behavior is understandable to a human operator.
 
+### 6. Outcome KPI Validation
+The outcome document is tested in three practical ways:
+
+* **Token and cost signals:** `latency_seconds`, `token_efficiency`, and telemetry dashboard history prove whether the agent is saving time and tokens compared with the monolithic baseline.
+* **Routing and offload signals:** `routing_accuracy`, `scout_confidence_gate`, and `deterministic_offload_accuracy` prove that Scout decisions route to the right branch and that math/devops prompts use deterministic Python paths.
+* **Security signals:** `pii_redaction_accuracy`, HITL BDD scenarios, and Scout Supervisor tests prove that PII, dangerous requests, and low-confidence routes pause for human review.
+
 ---
 
 ## 📖 Active Gherkin Feature Library
@@ -106,6 +113,12 @@ Feature: Capability Arbitrator Routing
     When the user inputs "Write a python function to compute prime factors."
     Then the prompt is routed to the "coding" capability
     And the final response contains coding instructions or a code block
+
+  Scenario: Math prompt routing
+    Given the Capability Arbitrator is active
+    When the user inputs "What is 2500 multiplied by 4?"
+    Then the prompt is routed to the "math" capability
+    And the final response contains a deterministic math result
 
   Scenario: MCP prompt routing
     Given the Capability Arbitrator is active

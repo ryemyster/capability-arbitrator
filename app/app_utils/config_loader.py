@@ -84,6 +84,7 @@ def _discover_default_caps(target_dir: str) -> List[CapabilityDefinition]:
     """Helper to dynamically auto-discover capabilities in target_dir."""
     discovered_skills = discover_local_skills(target_dir)
     default_caps = [
+        CapabilityDefinition("math", "deterministic arithmetic and closed-form calculations", "math"),
         CapabilityDefinition("coding", "writing, modifying, implementing files", "coding"),
         CapabilityDefinition("devops", "executing pytest, lint, code checks, format", "devops"),
         CapabilityDefinition("mcp", "viewing files, indexing, listing files", "mcp"),

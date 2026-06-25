@@ -32,23 +32,23 @@ graph TD
     Supervisor -->|Confidence < 75%| Approval
     Supervisor -->|Confidence >= 75%| Router[5. Router Node]:::system
     
-    Router -->|devops| DevOps[6. DevOps Node]:::branch
-    Router -->|research| Research[7. Research Node]:::branch
-    Router -->|coding| Coding[8. Coding Node]:::branch
-    Router -->|mcp| MCP[9. MCP Node]:::branch
-    Router -->|stride| Stride[10. Stride Node]:::branch
+    Router -->|math| Math[6. Math Node]:::branch
+    Router -->|devops| DevOps[7. DevOps Node]:::branch
+    Router -->|research| Research[8. Research Node]:::branch
+    Router -->|coding| Coding[9. Coding Node]:::branch
+    Router -->|mcp| MCP[10. MCP Node]:::branch
+    Router -->|stride| Stride[11. Stride Node]:::branch
     Router -->|default| Approval
     
-    DevOps --> Watchdog[11. Telemetry Watchdog]:::system
+    Math --> Watchdog[12. Telemetry Watchdog]:::system
+    DevOps --> Watchdog
     Research --> Watchdog
     Coding --> Watchdog
     MCP --> Watchdog
     Stride --> Watchdog
     Approval --> Watchdog
     
-    Watchdog --> Judge[12. Compliance Judge]:::system
-    Judge -->|Violation / Leak| Router
-    Judge -->|Safe| END([13. Safe Return]):::system
+    Watchdog --> END([13. Safe Return]):::system
 ```
 
 ---
@@ -72,7 +72,7 @@ graph LR
 ## 🎛️ Node Topology Directory
 
 
-Our graph contains thirteen distinct execution and monitoring nodes:
+Our active ADK graph contains thirteen distinct execution and monitoring nodes:
 
 ### 1. Inbound Filtration
 *   **Security Screen (1):** A pre-LLM regex filtration layer. It intercepts user inputs to check for GDPR-scoped PII (SSNs, emails, phone numbers, credit cards, IP addresses), routing violations immediately to human approval.
@@ -84,21 +84,22 @@ Our graph contains thirteen distinct execution and monitoring nodes:
 *   **Router Node (5):** Evaluates the tag and forwards the prompt context along the correct execution edge.
 
 ### 3. Specialized Execution Nodes
-*   **DevOps Node (6):** A deterministic execution target. It runs local bash commands, tests (via `pytest`), or checkers via subprocesses.
-*   **Research Node (7):** A specialized `LlmAgent` loaded with academic literature-searching instructions and few-shot formatting patterns.
-*   **Coding Node (8):** An `LlmAgent` bound to an MCP filesystem tool, permitting file generation and refactoring in the local workspace.
-*   **MCP Node (9):** A tool-enabled agent focused on filesystem search, file list retrieval, and file index matching.
-*   **Stride Node (10):** A security threat modeling agent that maps architectural components to security threats.
+*   **Math Node (6):** A deterministic execution target built in [app/app_utils/math_node_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/math_node_utils.py). It sends simple arithmetic to Python code, records zero LLM tokens, and returns an exact result.
+*   **DevOps Node (7):** A deterministic execution target. It runs local bash commands, tests (via `pytest`), or checkers via subprocesses.
+*   **Research Node (8):** A specialized `LlmAgent` loaded with academic literature-searching instructions and few-shot formatting patterns.
+*   **Coding Node (9):** An `LlmAgent` bound to an MCP filesystem tool, permitting file generation and refactoring in the local workspace.
+*   **MCP Node (10):** A tool-enabled agent focused on filesystem search, file list retrieval, and file index matching.
+*   **Stride Node (11):** A security threat modeling agent that maps architectural components to security threats.
 
 ### 4. Outbound Quality & Guardrails
-*   **Telemetry Watchdog (11):** Think of this like a helpful watchdog that monitors how much time and money our agent is spending. At the end of every execution, it checks two conditions:
+*   **Telemetry Watchdog (12):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
     1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
     2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
     
     If either budget is exceeded, the watchdog takes two corrective actions:
     - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
     - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
-*   **Compliance Judge (12):** Reviews output text for security risks (e.g. API keys generated in code blocks) and checks factual grounding before sending the response back to the user.
+*   **Safe Return (13):** The normal endpoint after execution and telemetry review. Output judging also exists in the evaluation layer through `OutcomeJudge`, but it is not wired as a live graph node in [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py).
 
 ---
 

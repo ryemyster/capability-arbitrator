@@ -29,6 +29,12 @@ Feature: Capability Arbitrator Routing
     Then the prompt is routed to the "coding" capability
     And the final response contains coding instructions or a code block
 
+  Scenario: Math prompt routing
+    Given the Capability Arbitrator is active
+    When the user inputs "What is 2500 multiplied by 4?"
+    Then the prompt is routed to the "math" capability
+    And the final response contains a deterministic math result
+
   Scenario: MCP prompt routing
     Given the Capability Arbitrator is active
     When the user inputs "Find files in the current workspace directory."

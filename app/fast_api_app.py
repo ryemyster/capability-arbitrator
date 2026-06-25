@@ -173,6 +173,8 @@ def get_trace_event(event: Any) -> list[str]:
         elif route and route != "safe":
             if route == "devops":
                 traces.append("⚡ Deterministic Offloading: Routing to local DevOps engine (0 LLM tokens, 100% savings).")
+            elif route == "math":
+                traces.append("⚡ Deterministic Offloading: Routing to local Math engine (0 LLM tokens, exact arithmetic).")
             else:
                 traces.append(f"🚀 Execution Node: Routing task to the specialized {route.upper()} executor...")
 
@@ -184,6 +186,8 @@ def get_trace_event(event: Any) -> list[str]:
         traces.append(f"🔀 Router Node: Progressive disclosure triggered. Swapping out standard prompt and loading specialized instructions/tools for capability: {tag.upper()}")
         if tag == "devops":
             traces.append("Pruned all LLM execution tools/skills. Handed execution off to deterministic DevOps toolchain.")
+        elif tag == "math":
+            traces.append("Pruned all LLM execution tools/skills. Handed arithmetic off to deterministic Python math.")
         else:
             traces.append("Pruned 4 unused skills/tool sets to prevent context saturation and hallucinatory behavior.")
             

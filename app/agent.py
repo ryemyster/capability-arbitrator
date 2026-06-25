@@ -39,6 +39,7 @@ from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.config_loader import get_target_dir, load_arbitrator_config, load_mcp_configs
 from app.app_utils.devops_utils import devops_fn
+from app.app_utils.math_node_utils import math_fn
 from app.app_utils.scout_utils import build_scout_node
 from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.telemetry import (
@@ -146,6 +147,7 @@ node_mapping = {
     "coding": coding_node,
     "mcp": mcp_node,
     "devops": devops_fn,
+    "math": math_fn,
     "approval": approval_fn,
 }
 
@@ -200,6 +202,8 @@ for cap in caps:
             target_node = mcp_node
         elif cap.node_type == "devops":
             target_node = devops_fn
+        elif cap.node_type == "math":
+            target_node = math_fn
         else:
             target_node = approval_fn
     
