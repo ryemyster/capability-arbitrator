@@ -48,10 +48,11 @@ graph TD
     Stride --> Judge
     Approval --> Judge
 
-    Judge -->|Safe| Watchdog[13. Telemetry Watchdog]:::system
+    Judge -->|Safe| ProductAgent[13. Product Agent]:::system
     Judge -->|Violation — retry| Router
 
-    Watchdog --> END([14. Safe Return]):::system
+    ProductAgent --> Watchdog[14. Telemetry Watchdog]:::system
+    Watchdog --> END([15. Safe Return]):::system
 ```
 
 ---
@@ -75,7 +76,7 @@ graph LR
 ## 🎛️ Node Topology Directory
 
 
-Our active ADK graph contains fourteen distinct execution and monitoring nodes:
+Our active ADK graph contains fifteen distinct execution and monitoring nodes:
 
 ### 1. Inbound Filtration
 *   **Security Screen (1):** A pre-LLM regex filtration layer. It intercepts user inputs to check for GDPR-scoped PII (SSNs, emails, phone numbers, credit cards, IP addresses), routing violations immediately to human approval.
@@ -97,14 +98,16 @@ Our active ADK graph contains fourteen distinct execution and monitoring nodes:
 ### 4. Outbound Quality & Guardrails
 *   **Compliance Judge (12):** Think of this like a spell-checker at the exit door. Before any execution output reaches the user, this node reads it and looks for anything that resembles a password, API key, or secret token. It uses a list of well-known secret fingerprints — AWS access keys, GitHub tokens, private key blocks, bearer tokens, and more — and scans the text using pattern matching (regex). If everything looks clean, the output moves on to the Telemetry Watchdog with a **safe** route. If a secret is found, the judge sends the agent back to redo its work with an **auto-heal prompt** that names the exact type of leak and instructs the model to replace all sensitive values with `<REDACTED>`. This node is implemented in [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py).
 
-*   **Telemetry Watchdog (13):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
+*   **Product Agent (13):** Think of this like a quality assurance inspector stationed at the end of the assembly line. After the Compliance Judge clears the output as secret-free, the Product Agent reads the full telemetry record for that transaction and checks it against every KPI contract defined in `docs/OUTCOMES.md`. It verifies five things: (1) the Scout's routing confidence was at least 75%, (2) math and devops tasks burned zero LLM tokens (used deterministic code instead), (3) any PII detection triggered a HITL escalation, (4) the run completed within 30 seconds, and (5) the Capability Arbitrator saved at least 80% of the tokens a monolithic agent would have used. If anything fails, the Product Agent records a named violation and a suggested remediation step — all written back into the telemetry record before `save_run()` persists it, so the eval scorecard can read real runtime KPI verdicts alongside offline scores. This node is implemented in [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py).
+
+*   **Telemetry Watchdog (14):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
     1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
     2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
     
     If either budget is exceeded, the watchdog takes two corrective actions:
     - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
     - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
-*   **Safe Return (14):** The normal endpoint after execution, compliance review, and telemetry monitoring. The `OutcomeJudge` also runs in the evaluation layer for offline grading, but the `ComplianceJudge` is the live runtime safety gate wired directly into the ADK graph in [app/agent.py](app/agent.py).
+*   **Safe Return (15):** The normal endpoint after execution, compliance review, and telemetry monitoring. The `OutcomeJudge` also runs in the evaluation layer for offline grading, but the `ComplianceJudge` is the live runtime safety gate wired directly into the ADK graph in [app/agent.py](app/agent.py).
 
 ---
 
