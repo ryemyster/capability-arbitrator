@@ -10,7 +10,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Uses ADK 2.0 Graph (Workflow)**
     *   *What:* The agent is constructed as a conditional flowchart (nodes and edges) rather than a flat script.
-    *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined.
+    *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined. *(Completed: Phase 13 [Telemetry Watchdog Node for Runtime Budget Guardrail] in [app/app_utils/watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/watchdog_utils.py))*
 *   **[x] Implements Conditional Branching**
     *   *What:* Dynamic routing based on intent (routing "math" to calculations, "research" to LLM analysis, etc.).
     *   *Citation:* Completed in [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L252-267).

@@ -55,15 +55,7 @@ from app.app_utils.telemetry import (
 
 load_dotenv()
 
-PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
-LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
-
-class GlobalGemini(Gemini):
-    @cached_property
-    def api_client(self) -> genai.Client:
-        return genai.Client(vertexai=True, project=PROJECT_ID, location=LOCATION)
-
-global_model = GlobalGemini(model=MODEL)
+from app.app_utils.watchdog_utils import global_model, telemetry_watchdog, PROJECT_ID, LOCATION
 
 # 1. Resolve target workspace CWD and load capabilities configuration
 target_dir = get_target_dir()
@@ -244,6 +236,8 @@ def security_screen(node_input: str) -> Event:
     record_security_screen(pii_detected=False, pii_types=[])
     return Event(output=node_input, route="safe")  # type: ignore
 
+
+
 edges = [
     Edge(from_node=START, to_node=security_screen),
     Edge(from_node=security_screen, to_node=llm_scout, route="safe"),
@@ -251,6 +245,7 @@ edges = [
     Edge(from_node=llm_scout, to_node=router_fn),
 ]
 
+terminal_nodes = []
 for cap in caps:
     target_node = node_mapping.get(cap.tag)
     if not target_node:
@@ -265,8 +260,16 @@ for cap in caps:
     
     if target_node:
         edges.append(Edge(from_node=router_fn, to_node=target_node, route=cap.tag))
+        if target_node not in terminal_nodes:
+            terminal_nodes.append(target_node)
 
 edges.append(Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE))
+if approval_fn not in terminal_nodes:
+    terminal_nodes.append(approval_fn)
+
+# Wire all terminal nodes to the Telemetry Watchdog node
+for t_node in terminal_nodes:
+    edges.append(Edge(from_node=t_node, to_node=telemetry_watchdog))
 
 root_workflow = Workflow(
     name="root_agent",
