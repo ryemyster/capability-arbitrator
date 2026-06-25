@@ -40,15 +40,18 @@ graph TD
     Router -->|stride| Stride[11. Stride Node]:::branch
     Router -->|default| Approval
     
-    Math --> Watchdog[12. Telemetry Watchdog]:::system
-    DevOps --> Watchdog
-    Research --> Watchdog
-    Coding --> Watchdog
-    MCP --> Watchdog
-    Stride --> Watchdog
-    Approval --> Watchdog
-    
-    Watchdog --> END([13. Safe Return]):::system
+    Math --> Judge[12. Compliance Judge]:::gate
+    DevOps --> Judge
+    Research --> Judge
+    Coding --> Judge
+    MCP --> Judge
+    Stride --> Judge
+    Approval --> Judge
+
+    Judge -->|Safe| Watchdog[13. Telemetry Watchdog]:::system
+    Judge -->|Violation — retry| Router
+
+    Watchdog --> END([14. Safe Return]):::system
 ```
 
 ---
@@ -72,7 +75,7 @@ graph LR
 ## 🎛️ Node Topology Directory
 
 
-Our active ADK graph contains thirteen distinct execution and monitoring nodes:
+Our active ADK graph contains fourteen distinct execution and monitoring nodes:
 
 ### 1. Inbound Filtration
 *   **Security Screen (1):** A pre-LLM regex filtration layer. It intercepts user inputs to check for GDPR-scoped PII (SSNs, emails, phone numbers, credit cards, IP addresses), routing violations immediately to human approval.
@@ -92,14 +95,16 @@ Our active ADK graph contains thirteen distinct execution and monitoring nodes:
 *   **Stride Node (11):** A security threat modeling agent that maps architectural components to security threats.
 
 ### 4. Outbound Quality & Guardrails
-*   **Telemetry Watchdog (12):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
+*   **Compliance Judge (12):** Think of this like a spell-checker at the exit door. Before any execution output reaches the user, this node reads it and looks for anything that resembles a password, API key, or secret token. It uses a list of well-known secret fingerprints — AWS access keys, GitHub tokens, private key blocks, bearer tokens, and more — and scans the text using pattern matching (regex). If everything looks clean, the output moves on to the Telemetry Watchdog with a **safe** route. If a secret is found, the judge sends the agent back to redo its work with an **auto-heal prompt** that names the exact type of leak and instructs the model to replace all sensitive values with `<REDACTED>`. This node is implemented in [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py).
+
+*   **Telemetry Watchdog (13):** Think of this like a helpful monitor that watches how much time and money our agent is spending. At the end of every execution, it checks two conditions:
     1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
     2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
     
     If either budget is exceeded, the watchdog takes two corrective actions:
     - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
     - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
-*   **Safe Return (13):** The normal endpoint after execution and telemetry review. Output judging also exists in the evaluation layer through `OutcomeJudge`, but it is not wired as a live graph node in [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py).
+*   **Safe Return (14):** The normal endpoint after execution, compliance review, and telemetry monitoring. The `OutcomeJudge` also runs in the evaluation layer for offline grading, but the `ComplianceJudge` is the live runtime safety gate wired directly into the ADK graph in [app/agent.py](app/agent.py).
 
 ---
 
