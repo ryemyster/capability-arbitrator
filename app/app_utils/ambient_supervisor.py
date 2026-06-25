@@ -15,11 +15,12 @@
 """
 File: ambient_supervisor.py
 Purpose: [EXPERIMENTAL] Event-driven background observers for Quality Flywheel and STRIDE Self-Healing.
-Why it exists: Implements the "ambient agent" pattern — continuously monitoring data streams
-               and acting autonomously when conditions are met, without waiting for human prompts.
+Why it exists: Implements the ambient-observer pattern after telemetry is saved, without requiring
+               an operator to run a separate command after every agent transaction.
 How it works: on_run_saved() is called from save_run() after each telemetry write. It checks
-              each feature's ambient surface flag and dispatches to the appropriate observer.
-              All errors are caught and logged; the main agent flow is never blocked.
+              each feature's ambient surface flag and dispatches to observers that log signals.
+              It is not a standalone daemon, and the current implementation does not patch files
+              or open PRs. All errors are caught and logged; the main agent flow is never blocked.
 """
 
 import logging

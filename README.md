@@ -1,107 +1,104 @@
 # Capability Arbitrator 
 [Created By: Ryan K McDonald](https://ryanmcdonald.ai)
 
-### The High-Performance Orchestration Gateway for AI Agent Infrastructure
+## Capability-Scoped Execution With Measurable Governance
 
-[![Status: Production-Ready](https://img.shields.io/badge/Status-Production--Ready-success.svg)](#)
+[![Status: Evaluation-Ready Prototype](https://img.shields.io/badge/Status-Evaluation--Ready%20Prototype-blue.svg)](#)
 [![Stack: ADK 2.0 + MCP](https://img.shields.io/badge/Stack-ADK%202.0%20%2B%20MCP-blue.svg)](#)
-[![Performance: Optimized](https://img.shields.io/badge/Performance-Optimized-orange.svg)](#)
+[![Telemetry: Estimated + Measured](https://img.shields.io/badge/Telemetry-Estimated%20%2B%20Measured-orange.svg)](#)
 
-Traditional AI frameworks load every tool, instruction, and dependency into a single monolithic prompt. This anti-pattern leads to **Context Rot**—overloading LLM context windows, degrading decision accuracy, and burning reasoning budgets.
+Today’s agent systems become increasingly difficult to operate as they gain more tools, skills and workflows. Even when routing exists, execution logic, governance and telemetry are often tightly coupled, making it difficult to understand why an agent chose a capability, how much context it consumed or whether the routing decision was actually beneficial.
 
-The **Capability Arbitrator** is a lightweight, low-latency traffic-control router for agentic systems. By separating *intent classification* from *execution*, it uses **Progressive Disclosure** to dynamically stream only the specific skills and tools needed at the exact millisecond of execution.
+As these systems grow, developers frequently compensate by expanding prompts and attaching more tools to every request. The result is larger context windows, higher inference costs and reduced observability into the decisions the system is making.
 
-## Radical Vision (It all started with this)
-Today when AI developers and enterprise engineering teams want to build capable autonomous agents to solve complex workflows, they have to dump every conceivable tool, API and procedural instruction into a single, massive system prompt for every request.
+## Our Approach
 
-This is unacceptable because it causes "Context Rot" and "Prompt Bloat," forcing the model to burn its expensive reasoning budget just parsing irrelevant instructions, which leads to high latency, hallucinations and degraded decision-making.
+Capability Arbitrator separates **understanding** from **execution**.
 
-We envision a world where managing an AI ecosystem is like a highly efficient traffic control system—a "lean orchestration engine for AI" where models only hold the exact knowledge they need in their active memory.
+A lightweight Scout first determines what capability a request requires. The graph then executes the matching branch: deterministic tasks use code, LLM tasks use a scoped skill or toolset, and risky or uncertain tasks pause for human approval.
 
-We are bringing this world about through the Capability Arbitrator, an architecture that uses a high-speed Scout node to classify a user's intent first, and then uses Progressive Disclosure to dynamically load only the specific Agent Skills, MCP tools, deterministic scripts or human reviewers required at the exact moment of execution.
+This keeps execution focused while adding a governance layer around routing, safety, telemetry and outcome checks.
 
+## What Makes It Different
+Capability Arbitrator is not simply another multi-agent framework.
 
-## 📈 Measured Outcomes
+It combines:
+* capability-based routing
+* deterministic execution
+* governance checkpoints
+* telemetry provenance
+* runtime outcome validation
+* controlled optimization through offline learning loops
 
-| Metric | Monolithic Agent | Capability Arbitrator | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Token Saturation Ratio (TSR)** | ~10% (Context Rot) | >85% (Precision) | **8.5× reasoning budget** |
-| **Estimated Cost per Execution** | ~250K input tokens | ~42K input tokens | **>83% cost reduction** |
-| **Routing Accuracy (Scout)** | N/A | >95% classification | — |
-| **Deterministic Offload (Math/DevOps)** | 0% (LLM for all) | 100% code-path accuracy | **Eliminates LLM billing** |
-| **PII Redaction Rate** | 0% (no screen) | 100% pre-LLM intercept | — |
+into a single execution architecture.
 
-*Metrics validated by the LLM-as-a-Judge eval scorecard and the live telemetry dashboard. See [docs/OUTCOMES.md](docs/OUTCOMES.md) for full KPI definitions.*
+The goal is to make AI workflows measurable, governable and continuously improvable.
+
+## Outcome Signals
+
+The project tracks a mix of measured runtime values, deterministic checks and baseline estimates. The telemetry code labels token and cost comparisons as estimates when ADK or Gemini does not expose exact downstream token usage.
+
+| Signal | Current Evidence | Confidence |
+| :--- | :--- | :--- |
+| **Capability routing** | Scout emits a capability tag and confidence score before the Router selects an execution branch. | Implemented |
+| **Deterministic offload** | Math and DevOps paths run through Python/subprocess helpers and record `deterministic_zero` execution tokens. | Implemented |
+| **PII handling** | Regex-based PII detection routes matching prompts to HITL approval before Scout execution. | Implemented detection and escalation |
+| **Token/cost savings** | Runtime telemetry compares arbitrator token footprint against a monolithic baseline estimate. | Estimated |
+| **Routing quality** | BDD tests, eval scorecards and the Quality Flywheel inspect routing behavior. | Test/eval-backed target |
+| **Self-healing security** | STRIDE Self-Healing CLI can audit, patch, verify and open a PR when explicitly enabled. | Experimental / opt-in |
+
+See [docs/OUTCOMES.md](docs/OUTCOMES.md) for the full KPI definitions, evidence boundaries and dashboard metric map.
 
 ---
 
-## ⚡ Core Value Proposition
+## Core Value Proposition
 
-* **Zero-Waste Context Windows:** Prevent prompt bloat by loading tools and instructions on-demand.
-* **Cognitive Budget Preservation:** Maximize model accuracy by keeping active memory hyper-focused on the task.
+* **Capability-Scoped Execution:** Route each request to the smallest suitable execution branch.
+* **Decision Visibility:** Record the Scout tag, confidence, token source and run source for each execution.
 * **Hybrid Routing Engine:** Instantly route deterministic queries (like math or linting) to native code, bypassing expensive LLM calls entirely.
-* **Production-Grade Guardrails:** Built-in GDPR security screening, confidence-based human-in-the-loop (HITL) escalations, and runtime compliance auditing.
+* **Prototype Guardrails:** Built-in regex PII detection, confidence-based human-in-the-loop (HITL) escalation, runtime output compliance checks and KPI auditing.
 
 ---
 
-## 🎒 The Backpack Analogy
-> [!TIP]
-> Think of a traditional agent like a student carrying a massive backpack filled with textbooks for every subject. When asked a simple math question, the student dumps *every single textbook* onto their desk and tries to read them all at once.
->
-> The **Capability Arbitrator** keeps the desk completely empty. When a query arrives:
-> 1. A lightweight **Scout** identifies the query's domain: *"This requires Math."*
-> 2. It reaches into the backpack, retrieves *only* the Math textbook, and hands it to the execution worker.
+## Core Architecture
+
+The runtime graph follows this lifecycle:
+
+```text
+Security Screen -> Scout -> Scout Supervisor -> Router -> Execution Node
+  -> Compliance Judge -> Product KPI Auditor -> Telemetry Watchdog
+```
+
+This is the central idea: **Scout decides, gates govern, nodes execute, telemetry proves or challenges the decision.**
 
 
----
-
-## 🧠 Why Capability Arbitration?
-
-The reason this architecture is fundamentally better than workarounds like token compression, proxying, or shrinking is because it attacks the root cause of the problem rather than just treating the symptoms.
-
-The industry has been treating LLMs like digital hoarders, dumping thousands of tokens of instructions into a single, massive system prompt. The common workaround is trying to compress or shrink that massive payload so it fits into the context window. However, the problem with shrinking or compressing tokens is that the model still has to hold all of those irrelevant instructions in its active memory.
-
-When irrelevant instructions saturate the context window, the model's reasoning degrades, leading to high latency, financial waste, and hallucinations—a problem known as **"Context Rot"** or **"Tool Bloat"**.
-
-Here is why the **Capability Arbitrator**, using **Agent Skills** and **Progressive Disclosure**, is a superior approach:
-
-*   **Preserving the "Reasoning Budget":** Instead of forcing the model to process compressed tokens of every possible tool, this architecture only exposes the model to a lightweight "menu" of metadata. The heavy procedural knowledge (the actual `SKILL.md` instructions and scripts) is only loaded at the exact moment the Scout node triggers it. This preserves the model's cognitive overhead entirely for solving the actual problem rather than trying to parse bloated instructions.
-*   **Dynamic Skill Dispatching over Linear Loading:** Other solutions still rely on "Linear Context Loading," where everything is pushed into the prompt at once. By shifting to "Dynamic Skill Dispatching," the agent acts as a generalist that can seamlessly flex into highly specialized roles on demand.
-*   **Procedural Memory vs. Passive Retrieval:** Other developers try to solve this by dumping data into a database and using RAG (Retrieval-Augmented Generation). But RAG is just passive data retrieval. Agent Skills give the AI **procedural memory**—step-by-step expertise on *how* to execute a workflow, not just *what* facts exist.
-*   **Lower Latency and Cost:** Compressing a massive monolithic prompt is still computationally expensive. By keeping the context window incredibly lean and gating what enters it, we eradicate the financial waste and slow response times associated with bloated agents.
-
-In short, tokenizing and compressing are just ways to build a slightly more efficient "everything agent." The Capability Arbitrator recognizes that the era of the "everything agent" is over. By focusing on **infrastructure discipline**, we prove that you don't need to shrink the context if you only give the agent exactly what it needs, exactly when it needs it.
-
----
-
-
-## 📚 Product Documentation Suite
+## Product Documentation Suite
 
 Explore our guides to understand, develop, and deploy the Capability Arbitrator:
 
 | Document | Purpose | Key Highlights |
 | :--- | :--- | :--- |
-| [📐 System Architecture](docs/ARCHITECTURE.md) | Technical blueprint and workflow topology | Scout-and-Execute pattern, Mermaid flowcharts, supervisor nodes |
-| [🛠️ Developer Portal](docs/DEVELOPMENT.md) | Local setup, skills development, and MCP configuration | Filesystem MCP servers, AST quality checker, git hooks |
-| [🧪 Verification & Testing](docs/TESTING.md) | Quality assurance and evaluation scorecards | BDD Gherkin specs, manual QA script checklists, LLM-as-a-Judge |
-| [🔒 Security & Privacy](docs/SECURITY.md) | GDPR PII filtration and STRIDE audits | Regex filtration screen, HITL escalation, threat modeling reports |
-| [🚀 Deployment Guide](docs/DEPLOYMENT.md) | Cloud scaling and containerization | FastAPI Dashboard, Google Cloud Run, auto-scaling |
-| [🏅 Rubric & Compliance](docs/RUBRIC.md) | Kaggle Capstone alignment and validations | Clickable file/line citations mapping requirements to the codebase |
+| [System Architecture](docs/ARCHITECTURE.md) | Architecture map and system boundaries | Runtime graph, improvement surfaces, deployment boundaries |
+| [Core Runtime Graph](docs/CORE_RUNTIME_GRAPH.md) | Detailed live graph behavior | Security screen, Scout, router, compliance judge, KPI auditor, watchdog |
+| [Improvement Surfaces](docs/IMPROVEMENT_SURFACES.md) | STRIDE/Flywheel operating model | Command mode, ambient mode, enablement flags, current limitations |
+| [Developer Portal](docs/DEVELOPMENT.md) | Local setup, skills development, and MCP configuration | Filesystem MCP servers, AST quality checker, git hooks |
+| [Verification and Testing](docs/TESTING.md) | Quality assurance and evaluation scorecards | BDD Gherkin specs, manual QA script checklists, LLM-as-a-Judge |
+| [Security & Privacy](docs/SECURITY.md) | GDPR PII filtration and STRIDE audits | Regex filtration screen, HITL escalation, threat modeling reports |
+| [Deployment Guide](docs/DEPLOYMENT.md) | Cloud scaling and containerization | FastAPI Dashboard, Google Cloud Run, auto-scaling |
+| [Rubric & Compliance](docs/RUBRIC.md) | Kaggle Capstone alignment and validations | Clickable file/line citations mapping requirements to the codebase |
 
 ---
 
----
+## Opt-In Self-Healing Security
 
-## 🌙 Moonshot: Autonomic Self-Healing Security
-
-The system can audit its own codebase for vulnerabilities using the STRIDE threat model, generate a targeted security patch, run the test suite to verify it, and open a pull request — all from a single command. See [`docs/STRATEGY.md`](docs/STRATEGY.md) for the full escalating-autonomy design and safety gates.
+When explicitly enabled, the system can audit its own codebase for vulnerabilities using the STRIDE threat model, generate a targeted security patch, run the test suite to verify it, and open a pull request — all from a single command. See [`docs/STRATEGY.md`](docs/STRATEGY.md) for the full escalating-autonomy design and safety gates.
 
 ```bash
 uv run arbitrator stride-heal app/agent.py --mode audit_only   # print STRIDE report
 uv run arbitrator stride-heal app/agent.py --mode apply_patch  # write + verify locally
 ```
 
-Both moonshot features (STRIDE Self-Healing and Quality Flywheel) support a three-layer runtime surface control:
+Both improvement features (STRIDE Self-Healing and Quality Flywheel) support a three-layer runtime surface control:
 
 | Layer | Toggle | Behavior when disabled |
 | :--- | :--- | :--- |
@@ -109,11 +106,11 @@ Both moonshot features (STRIDE Self-Healing and Quality Flywheel) support a thre
 | **Arbitrator** | `arbitrator.enabled: false` | CLI returns a clear "disabled" message |
 | **Ambient** *(experimental)* | `ambient.enabled: false` | Background observer stays silent |
 
-The **[EXPERIMENTAL] ambient supervisor** implements Google's *ambient agent* pattern: a persistent, event-driven background process that observes every agent transaction and acts autonomously when conditions are met — no human prompt required. Enable per-feature via `config/quality_flywheel.yaml` or `config/stride_self_healing.yaml`. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for design details.
+The **[EXPERIMENTAL] ambient supervisor** is a telemetry hook that observes saved runs when enabled. In the current implementation it logs Flywheel and STRIDE signals; patching and PR creation remain CLI-controlled. Enable per-feature via `config/quality_flywheel.yaml` or `config/stride_self_healing.yaml`. See [`docs/IMPROVEMENT_SURFACES.md`](docs/IMPROVEMENT_SURFACES.md) for design details.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install CLI
 Install the project dependencies using the package manager:
@@ -121,15 +118,29 @@ Install the project dependencies using the package manager:
 agents-cli install
 ```
 
-### 2. Launch Local Dev Console
-Start the terminal dev console to interact with the arbitrator graph:
+### 2. Launch The ADK Playground
+Start the ADK development UI:
 ```bash
 agents-cli playground
 ```
+Open `http://127.0.0.1:8080/dev-ui`.
 
-### 3. Serve the Visual Dashboard
-Run the FastAPI server locally to view the telemetry dashboard and live "Stats for Nerds" interface:
+### 3. Launch The Standalone Telemetry Dashboard
+Run the custom telemetry dashboard:
 ```bash
-uv run agents-cli dev
+uv run arbitrator dashboard
 ```
-Open your browser and navigate to `http://127.0.0.1:8080/dev-ui`.
+Open `http://127.0.0.1:8000/`.
+
+### 4. Launch The Unified FastAPI Service
+Run the combined ADK API, Pub/Sub endpoint and telemetry dashboard:
+```bash
+uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
+```
+
+| URL | What It Serves |
+| :--- | :--- |
+| `http://127.0.0.1:8000/` | ADK web UI root |
+| `http://127.0.0.1:8000/dashboard` | Custom telemetry dashboard |
+| `http://127.0.0.1:8000/api/run` | Streaming dashboard execution endpoint |
+| `http://127.0.0.1:8000/api/metrics` | Local telemetry history |

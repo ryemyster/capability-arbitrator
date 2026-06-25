@@ -5,7 +5,7 @@ This guide outlines how to package and deploy the Capability Arbitrator and its 
 
 ---
 
-## ⚡ Unified Container Architecture
+## Unified Container Architecture
 
 * **The Problem:** Traditionally, agent deployments split the agent's execution API from its user interface. Managing CORS headers, service accounts, and multiple cloud URLs is an operational headache.
 * **The Solution:** We package the FastAPI telemetry dashboard and the ADK Agent API into a single Docker container. A single Cloud Run service handles both visual dashboard monitoring for developers and API runtimes for CLI clients.
@@ -24,15 +24,23 @@ graph TD
 
 ---
 
-## 🚀 Deployment Instructions
+## Deployment Instructions
 
 ### Step 1: Validate Locally
 Before deploying, verify that the unified app runs locally on your machine:
 ```bash
 uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 ```
-* **Dashboard Portal:** Open `http://127.0.0.1:8000/dashboard` in your browser.
-* **API Portal:** Open `http://127.0.0.1:8000/` to test endpoint responses.
+* **ADK Web UI Root:** Open `http://127.0.0.1:8000/`.
+* **Custom Telemetry Dashboard:** Open `http://127.0.0.1:8000/dashboard`.
+* **Telemetry API:** Call `http://127.0.0.1:8000/api/metrics`.
+* **Streaming Run API:** POST to `http://127.0.0.1:8000/api/run`.
+
+For local dashboard-only work, use:
+```bash
+uv run arbitrator dashboard
+```
+That standalone app serves the custom dashboard at `http://127.0.0.1:8000/`, not `/dashboard`.
 
 ### Step 2: Initialize Infrastructure Scaffolding
 Generate the standard container configurations and Terraform templates required for Google Cloud:
@@ -57,7 +65,7 @@ agents-cli deploy
 
 ---
 
-## 🎯 Deployment Configuration Matrix
+## Deployment Configuration Matrix
 
 | Target Option | Purpose | Use-Case | Key Metrics |
 | :--- | :--- | :--- | :--- |
@@ -66,7 +74,7 @@ agents-cli deploy
 
 ---
 
-## 💰 Resource & Scaling Optimization
+## Resource and Scaling Optimization
 
 > [!TIP]
 > **Scale-to-Zero Billing:** By deploying to Google Cloud Run, instances scale down to 0 when idle. This completely eliminates idle compute charges, significantly reducing operations cost for internal developer tools.

@@ -5,7 +5,7 @@ Welcome to the Capability Arbitrator developer guide. This document outlines the
 
 ---
 
-## 🛠️ Environment Prerequisites
+## Environment Prerequisites
 
 Before starting, ensure you have the following installed on your machine:
 * **Python Runtime:** Python 3.12 or newer.
@@ -14,7 +14,7 @@ Before starting, ensure you have the following installed on your machine:
 
 ---
 
-## 🚀 Installation & Setup
+## Installation and Setup
 
 1. **Clone the Codebase & Install Dependencies:**
    ```bash
@@ -33,12 +33,12 @@ Before starting, ensure you have the following installed on your machine:
 
 ---
 
-## 🔌 Model Context Protocol (MCP) Integration
+## Model Context Protocol (MCP) Integration
 
 The Capability Arbitrator utilizes MCP to standardise how sub-agents access system resources. By default, it exposes a local filesystem MCP toolset to the `coding_node` and `mcp_node`.
 
 ### Filesystem MCP Setup
-In [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py), the toolset is registered via standard node stdio transports:
+In [app/agent.py](../app/agent.py), the toolset is registered via standard node stdio transports:
 ```python
 filesystem_mcp = McpToolset(
     connection_params=StdioConnectionParams(
@@ -55,7 +55,7 @@ filesystem_mcp = McpToolset(
 
 ---
 
-## 🧠 Developing with Agent Skills
+## Developing with Agent Skills
 
 Specialized agent workflows are encapsulated as **Skills** under the `.agents/skills/` directory. Each skill must contain:
 1. `SKILL.md`: Markdown instructions containing standard YAML frontmatter (`name` and `description`).
@@ -75,12 +75,12 @@ research_node = LlmAgent(
 
 ---
 
-## 🛡️ Git Quality Gates & Verification
+## Git Quality Gates and Verification
 
 We enforce strict codebase formatting and structural constraints via pre-commit and pre-push hooks. 
 
 ### Automated AST Quality Auditor
-The local auditor [scripts/agent_quality_check.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/scripts/agent_quality_check.py) parses modifications before they are pushed, enforcing:
+The local auditor [scripts/agent_quality_check.py](../scripts/agent_quality_check.py) parses modifications before they are pushed, enforcing:
 * **Function Limits:** No node or helper function may exceed 50 lines.
 * **File Limits:** No executable Python file may exceed 300 lines.
 * **Typing:** Explicit type signatures are required on all helper functions.
@@ -93,13 +93,23 @@ uv run python scripts/agent_quality_check.py
 
 ---
 
-## 💻 Developer Command Reference
+## Developer Command Reference
 
 | Action | Command | Purpose |
 | :--- | :--- | :--- |
 | **Sync Packages** | `agents-cli install` | Syncs the virtual environment using `uv` |
-| **Local Shell** | `agents-cli playground` | Interactive REPL playground to test routing |
-| **FastAPI server** | `uv run agents-cli dev` | Launches FastAPI server and visual telemetry dashboard |
+| **ADK Playground** | `agents-cli playground` | Starts the ADK development UI at `http://127.0.0.1:8080/dev-ui` |
+| **Standalone Dashboard** | `uv run arbitrator dashboard` | Starts the custom telemetry dashboard at `http://127.0.0.1:8000/` |
+| **Unified FastAPI Service** | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000` | Starts ADK web UI, custom dashboard, `/api/run`, `/api/metrics`, and `/pubsub` |
 | **Verify Unit Tests** | `uv run pytest` | Executes standard pytest verification checks |
 | **Check Quality** | `uv run python scripts/agent_quality_check.py` | Runs AST linting rules |
 | **Cloud Deploy** | `agents-cli deploy` | Deploys the service container to Google Cloud Run |
+
+## Local Runtime URLs
+
+| URL | Launch Mode | What You Should See |
+| :--- | :--- | :--- |
+| `http://127.0.0.1:8080/dev-ui` | `agents-cli playground` | ADK development playground |
+| `http://127.0.0.1:8000/` | `uv run arbitrator dashboard` | Custom telemetry dashboard |
+| `http://127.0.0.1:8000/` | `uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000` | ADK web UI root |
+| `http://127.0.0.1:8000/dashboard` | Unified FastAPI service | Custom telemetry dashboard |

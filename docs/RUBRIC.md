@@ -5,7 +5,7 @@ This guide maps each technical requirement from the Kaggle Capstone rubric to it
 
 ---
 
-## 🧭 Evaluation & Compliance Matrix
+## Evaluation and Compliance Matrix
 
 Our compliance requirements are categorized into four execution layers:
 
@@ -13,11 +13,12 @@ Our compliance requirements are categorized into four execution layers:
 | :--- | :--- | :--- | :--- |
 | **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L269-273](app/agent.py#L269-273) |
 | | Conditional Branching | Dynamic routing by classification | [app/agent.py:L125-136](app/agent.py#L125-136) |
-| | Security Screen | GDPR PII regex redactor | [app/agent.py:L225-244](app/agent.py#L225-244), [SECURITY.md](docs/SECURITY.md) |
+| | Security Screen | GDPR-scoped PII regex detector and HITL escalation gate | [app/agent.py](app/agent.py), [SECURITY.md](docs/SECURITY.md) |
 | | Output Safety Gate | Compliance judge scans outputs for secret leaks, auto-heals | [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py) |
-| | KPI Outcome Auditor | Product Agent checks all 5 KPI thresholds per transaction, writes verdicts to telemetry for eval scorecard integration | [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) |
-| | Quality Flywheel | Autonomic offline optimizer: reads telemetry violations, generates improved few-shots via Gemini, validates routing accuracy, opens PR | [app/app_utils/flywheel_utils.py](app/app_utils/flywheel_utils.py), [config/kpi_config.yaml](../config/kpi_config.yaml) |
-| | STRIDE Self-Healing | Autonomic security loop: audits a file via STRIDE, generates a targeted patch via patch_agent, verifies with pytest, opens PR; disabled by default with escalating autonomy modes | [app/app_utils/patch_agent_utils.py](app/app_utils/patch_agent_utils.py), [app/skills/patch_agent/SKILL.md](app/skills/patch_agent/SKILL.md), [config/stride_self_healing.yaml](../config/stride_self_healing.yaml) |
+| | KPI Outcome Auditor | Product KPI Auditor checks all 5 KPI thresholds per transaction and writes verdicts to telemetry for eval scorecard integration | [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) |
+| | Quality Flywheel | Opt-in offline optimizer: reads telemetry violations, generates improved few-shots via Gemini, validates routing accuracy, opens PR when enabled and triggered | [app/app_utils/flywheel_utils.py](../app/app_utils/flywheel_utils.py), [config/kpi_config.yaml](../config/kpi_config.yaml) |
+| | STRIDE Self-Healing | Opt-in security loop: audits a file via STRIDE, generates a targeted patch via patch_agent, verifies with pytest, opens PR only in `open_pr` mode | [app/app_utils/patch_agent_utils.py](../app/app_utils/patch_agent_utils.py), [app/skills/patch_agent/SKILL.md](../app/skills/patch_agent/SKILL.md), [config/stride_self_healing.yaml](../config/stride_self_healing.yaml) |
+| | Ambient Supervisor Hook | Experimental telemetry hook: observes/logs Flywheel and STRIDE signals after `save_run()`; does not patch or open PRs in current implementation | [app/app_utils/ambient_supervisor.py](../app/app_utils/ambient_supervisor.py) |
 | | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](.agents/CONTEXT.md) |
 | | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L138-156](app/agent.py#L138-156) |
 | **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](scripts/agent_quality_check.py) |
@@ -31,11 +32,11 @@ Our compliance requirements are categorized into four execution layers:
 
 ---
 
-## 📂 Implementation Details & Verification
+## Implementation Details and Verification
 
-### 1. Production Runtime Guardrails
+### 1. Prototype Runtime Guardrails
 *   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L93-121](app/agent.py#L93-121)).
-*   **Security Gating:** The `security_screen` intercepts the prompt first to redact credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides routing and escalates directly to human approval.
+*   **Security Gating:** The `security_screen` intercepts the prompt first to detect credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides normal routing and escalates directly to human approval.
 *   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L138-156](app/agent.py#L138-156)).
 
 ### 2. CI/CD Staging Gates
@@ -47,7 +48,7 @@ Our compliance requirements are categorized into four execution layers:
 
 ---
 
-## 🔒 Security & Privacy Notice
+## Security and Privacy Notice
 
 > [!CAUTION]
 > **Secret Redaction Compliance:** Do not commit `.env` configuration files to version control. The pre-commit quality gate checks the workspace and will reject commits containing raw credentials or plain-text secrets.

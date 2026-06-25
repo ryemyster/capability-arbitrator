@@ -32,12 +32,12 @@ EOF
 |---|---------|-------------------|-------|
 | 1 | `uv run arbitrator stride-heal --help` | Prints usage, exits 0 | |
 | 2 | `uv run arbitrator stride-heal /tmp/vuln_test.py --dry-run` | Prints STRIDE report, prints "DRY RUN" line, no file changes | |
-| 3 | `SELF_HEALING_MODE=propose_patch uv run arbitrator stride-heal /tmp/vuln_test.py --dry-run` | Shows top finding + what patch would be attempted, no writes | |
-| 4 | `SELF_HEALING_MODE=audit_only uv run arbitrator stride-heal /tmp/vuln_test.py` | Prints full STRIDE report, exits 0, no file writes | |
-| 5 | `SELF_HEALING_MODE=apply_patch uv run arbitrator stride-heal /tmp/vuln_test.py` | Generates patch, writes to file, runs `uv run pytest tests/unit/ -x -q`, passes or reverts | |
+| 3 | `STRIDE_SELF_HEALING_MODE=propose_patch uv run arbitrator stride-heal /tmp/vuln_test.py --dry-run` | Shows top finding + what patch would be attempted, no writes | |
+| 4 | `STRIDE_SELF_HEALING_MODE=audit_only uv run arbitrator stride-heal /tmp/vuln_test.py` | Prints full STRIDE report, exits 0, no file writes | |
+| 5 | `STRIDE_SELF_HEALING_MODE=apply_patch uv run arbitrator stride-heal /tmp/vuln_test.py` | Generates patch, writes to file, runs `uv run pytest tests/unit/ -x -q`, passes or reverts | |
 | 6 | Config `enabled: false` + no env override | Any command prints report only (audit_only forced) | |
 | 7 | Provide a non-existent target path | Exits non-zero with a clear error message | |
-| 8 | `SELF_HEALING_ENABLED=true SELF_HEALING_MODE=open_pr uv run arbitrator stride-heal /tmp/vuln_test.py` | Full pipeline: patch → verify → git branch → PR opened to develop | |
+| 8 | `STRIDE_SELF_HEALING_ENABLED=true STRIDE_SELF_HEALING_MODE=open_pr uv run arbitrator stride-heal /tmp/vuln_test.py` | Full pipeline: patch → verify → git branch → PR opened to develop | |
 
 ---
 
@@ -45,7 +45,7 @@ EOF
 
 - `audit_only` mode never writes any files.
 - `apply_patch` mode reverts the file when pytest fails.
-- `open_pr` mode requires `GITHUB_INTEGRATION_ENABLED=true` or `SELF_HEALING_MODE=open_pr` explicitly — does NOT create a PR silently.
+- `open_pr` mode requires `STRIDE_SELF_HEALING_MODE=open_pr` or `--mode open_pr` explicitly — does NOT create a PR silently.
 - All modes respect `--dry-run` (no file writes, no git operations).
-- Config env vars (`SELF_HEALING_ENABLED`, `SELF_HEALING_MODE`) override `stride_self_healing.yaml`.
+- Config env vars (`STRIDE_SELF_HEALING_ENABLED`, `STRIDE_SELF_HEALING_MODE`) override `stride_self_healing.yaml`.
 - No `.env` file contents are read, logged, or exposed in any output.

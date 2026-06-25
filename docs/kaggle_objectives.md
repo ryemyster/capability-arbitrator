@@ -42,7 +42,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 ### Section D: Security & Safety
 
 *   **[x] Implements a Security Screen**
-    *   *What:* Pre-execution regex checking to redact PII (like SSNs) or catch injection attacks. Expanded to support GDPR-scoped items (SSNs, Emails, Phone Numbers, Credit Cards, IP Addresses).
+    *   *What:* Pre-execution regex checking to detect PII (like SSNs) and route covered matches to approval. Expanded to support GDPR-scoped items (SSNs, Emails, Phone Numbers, Credit Cards, IP Addresses).
     *   *Citation:* Completed in [app/agent.py:L225-244](app/agent.py#L225-244) and verified by unit tests in [tests/unit/test_config_loader.py](tests/unit/test_config_loader.py).
 *   **[x] Uses a Persistent Context file (`CONTEXT.md`)**
     *   *What:* Permanent baseline rules that govern the agent's runtime instructions.

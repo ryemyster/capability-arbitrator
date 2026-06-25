@@ -5,7 +5,7 @@ Because Large Language Models generate text probabilistically, standard unit tes
 
 ---
 
-## 🧭 The Testing Hierarchy
+## Testing Hierarchy
 
 Our verification strategy divides testing into three distinct zones, moving from instant offline checks to slow, manual, or environment-dependent integration:
 
@@ -35,7 +35,7 @@ graph TD
 
 ---
 
-## 🧠 Best Practices for Testing AI Agents
+## Best Practices for Testing AI Agents
 
 Our architecture incorporates modern industry standards for validating agentic systems:
 
@@ -49,25 +49,25 @@ When tests trigger actual tools (like the DevOps subprocess runner), we mock the
 
 ### 3. Separation of Logic and Evaluation
 We divide validation into:
-* **Code correctness tests** (pytest/Gherkin): Verify that the codebase compiles, loads configs, redacts PII, and runs nodes. (100% pass/fail criteria).
+* **Code correctness tests** (pytest/Gherkin): Verify that the codebase compiles, loads configs, detects covered PII patterns, and runs nodes. (100% pass/fail criteria).
 * **LLM Scorecards** (Autonomous evals): Measure probabilistic accuracy, latencies, and token cost savings against a golden dataset using LLM-as-a-judge scorers.
 
 ### 4. Runtime Guardrail Validation
 The Telemetry Watchdog is a runtime guardrail, not a normal answer-writing agent.
 That means we validate it in two layers:
 
-* **Deterministic watchdog tests:** [tests/unit/test_watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_watchdog_utils.py) creates mocked ADK session events with fake token counts and timestamps. These tests prove that normal runs pass through unchanged, token overruns prune context, and latency overruns switch the downstream model to the cheaper fallback.
-* **Eval scorecard signal:** [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) includes `watchdog_recovery_compliance` as a runtime-quality signal. This metric checks whether generated traces and telemetry agree with the budget behavior, but it is not the only proof of recovery because real 30-second or 10,000-token overruns would make evals slow, costly, and flaky.
+* **Deterministic watchdog tests:** [tests/unit/test_watchdog_utils.py](../tests/unit/test_watchdog_utils.py) creates mocked ADK session events with fake token counts and timestamps. These tests prove that normal runs pass through unchanged, token overruns prune context, and latency overruns switch the downstream model to the cheaper fallback.
+* **Eval scorecard signal:** [tests/eval/eval_config.yaml](../tests/eval/eval_config.yaml) includes `watchdog_recovery_compliance` as a runtime-quality signal. This metric checks whether generated traces and telemetry agree with the budget behavior, but it is not the only proof of recovery because real 30-second or 10,000-token overruns would make evals slow, costly, and flaky.
 
 Use this rule of thumb: deterministic pytest proves watchdog mechanics, while evals monitor whether production-like traces continue to show healthy budget behavior.
 
 ### 5. Scout Supervisor Validation
 The Scout Supervisor is also a runtime guardrail. It checks whether the Scout is confident enough to route a prompt automatically.
 
-* **Deterministic supervisor tests:** [tests/unit/test_scout_supervisor_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_scout_supervisor_utils.py) sends fake Scout outputs into the supervisor. These tests prove that high-confidence routes continue, low-confidence routes pause for approval, and invalid confidence values fail closed to approval.
-* **Mocked graph routing:** [tests/conftest.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/conftest.py) makes mocked Scout responses include a high `confidence_score`, so existing BDD routing tests keep checking routing behavior instead of accidentally testing the low-confidence approval path.
-* **Eval scorecard signal:** [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) includes `scout_confidence_gate`, which checks that low-confidence Scout decisions go to approval while high-confidence decisions do not accidentally trigger the low-confidence gate.
-* **Phase QA script:** [tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py) gives a simple terminal check with `[PASS]` or `[FAIL]` output for Phase 14.
+* **Deterministic supervisor tests:** [tests/unit/test_scout_supervisor_utils.py](../tests/unit/test_scout_supervisor_utils.py) sends fake Scout outputs into the supervisor. These tests prove that high-confidence routes continue, low-confidence routes pause for approval, and invalid confidence values fail closed to approval.
+* **Mocked graph routing:** [tests/conftest.py](../tests/conftest.py) makes mocked Scout responses include a high `confidence_score`, so existing BDD routing tests keep checking routing behavior instead of accidentally testing the low-confidence approval path.
+* **Eval scorecard signal:** [tests/eval/eval_config.yaml](../tests/eval/eval_config.yaml) includes `scout_confidence_gate`, which checks that low-confidence Scout decisions go to approval while high-confidence decisions do not accidentally trigger the low-confidence gate.
+* **Phase QA script:** [tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py](../tests/scripts/phase14-scout-supervisor/test_scout_supervisor.py) gives a simple terminal check with `[PASS]` or `[FAIL]` output for Phase 14.
 
 Use this rule of thumb: pytest proves the confidence gate, while manual QA confirms the approval behavior is understandable to a human operator.
 
@@ -76,16 +76,16 @@ The outcome document is tested in three practical ways:
 
 * **Token and cost signals:** `latency_seconds`, `token_efficiency`, and telemetry dashboard history prove whether the agent is saving time and tokens compared with the monolithic baseline.
 * **Routing and offload signals:** `routing_accuracy`, `scout_confidence_gate`, and `deterministic_offload_accuracy` prove that Scout decisions route to the right branch and that math/devops prompts use deterministic Python paths.
-* **Security signals:** `pii_redaction_accuracy`, HITL BDD scenarios, and Scout Supervisor tests prove that PII, dangerous requests, and low-confidence routes pause for human review.
+* **Security signals:** the legacy-named `pii_redaction_accuracy` metric, HITL BDD scenarios, and Scout Supervisor tests prove that covered PII patterns, dangerous requests, and low-confidence routes pause for human review.
 
 ---
 
-## 📖 Active Gherkin Feature Library
+## Active Gherkin Feature Library
 
 The Capability Arbitrator utilizes pytest-bdd to link plain-English behavioral specifications with automated assertions. Below is our complete active library of Gherkin files:
 
 ### 1. Capability Arbitrator Routing (`routing.feature`)
-* **Path:** [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature)
+* **Path:** [tests/integration/features/routing.feature](../tests/integration/features/routing.feature)
 * **Purpose:** Verifies that Scout classifies prompts and forwards them to specialized execution nodes.
 
 ```gherkin
@@ -132,7 +132,7 @@ Feature: Capability Arbitrator Routing
 ```
 
 ### 2. Agent Stream Functionality (`agent_stream.feature`)
-* **Path:** [tests/integration/features/agent_stream.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/agent_stream.feature)
+* **Path:** [tests/integration/features/agent_stream.feature](../tests/integration/features/agent_stream.feature)
 * **Purpose:** Verifies that streaming endpoints yield Server-Sent Events (SSE) chunks containing model output.
 
 ```gherkin
@@ -144,7 +144,7 @@ Feature: Agent Stream Functionality
 ```
 
 ### 3. Agent Runtime App Functionality (`agent_runtime.feature`)
-* **Path:** [tests/integration/features/agent_runtime.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/agent_runtime.feature)
+* **Path:** [tests/integration/features/agent_runtime.feature](../tests/integration/features/agent_runtime.feature)
 * **Purpose:** Ensures the higher-level FastAPI wrapper registers user queries and feedback streams.
 
 ```gherkin
@@ -163,7 +163,7 @@ Feature: Agent Runtime App Functionality
 
 ---
 
-## 🔒 Documentation Governance Rule
+## Documentation Governance Rule
 > [!IMPORTANT]
 > **Documentation Sync Requirement:**
 > To prevent "context rot" and outdated specifications, any pull request or commit that modifies:
@@ -171,7 +171,7 @@ Feature: Agent Runtime App Functionality
 > 2. A test runner hook or mock wrapper in `conftest.py`
 > 3. Custom capability definitions in `app/agent.py`
 > 
-> **MUST** update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
+> **MUST** update [docs/TESTING.md](../docs/TESTING.md) and [docs/kaggle_objectives.md](../docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
 
 ---
 *Last Updated: 2026-06-24T18:35:00-06:00 (Integrated Telemetry Watchdog Node and Phase 13 validation scripts).*

@@ -43,7 +43,7 @@ uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 
 ### 4. Verify "Stats for Nerds" HUD Update
 After running a prompt, look at the **Stats for Nerds HUD** sidebar and confirm:
-- **Scout Model:** Shows `gemini-3.5-flash-lite` (or the active model name).
+- **Scout Model:** Shows `gemini-3.1-flash-lite` (or the active model name).
 - **Run Source:** Shows where the row came from, such as `dashboard_local_runner`, `pubsub_integration`, or `agent_runtime`.
 - **Scout Latency (TTFT):** Shows a valid positive decimal (e.g. `0.85s`).
 - **Active Exec Node:** Shows the correct active routing tag (e.g. `MATH` or `RESEARCH`).
