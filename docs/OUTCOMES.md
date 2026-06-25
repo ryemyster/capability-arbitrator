@@ -98,6 +98,13 @@ Enterprise operations require strict controls around data privacy, ambient permi
 
 These metrics are calculated at runtime by our telemetry logger ([app/app_utils/telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/telemetry.py)) and displayed on the FastAPI HUD dashboard.
 
+The dashboard is intentionally explicit about data provenance:
+
+* **Run source** shows whether the row came from the dashboard playground, Pub/Sub integration, local test runner, or Agent Runtime.
+* **Scout token source** is `actual` when the GenAI SDK reports usage and `estimated` when usage metadata is missing.
+* **Execution token source** is `deterministic_zero` for Math and DevOps offload, `actual` when a node reports tokens, and `estimated` when ADK does not expose downstream LLM node usage.
+* **Monolithic footprint and dollar savings** are baseline estimates used for comparison, not bills from Google Cloud.
+
 The architecture support lives in:
 
 * **Graph routing:** [app/agent.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py)

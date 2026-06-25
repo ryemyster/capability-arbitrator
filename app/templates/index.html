@@ -360,7 +360,7 @@
 
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--panel-border); display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
                     <div>
-                        <strong>How Savings are Calculated:</strong> Compares the Arbitrator's active token footprint (Scout classification + single loaded capability context) against a monolithic baseline agent (which always loads all 5 skill instructions and tool definitions, incurring a baseline overhead of +13,000 tokens per request).
+                        <strong>How Savings are Calculated:</strong> Rows come from persisted agent telemetry in <code>telemetry_db.json</code>. Scout tokens are actual when the GenAI response reports usage. Deterministic nodes report zero execution tokens. LLM execution-node tokens are estimated when ADK does not expose exact downstream usage. The monolithic comparison is always a baseline estimate.
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                         <span>💲 <strong>Pricing Tier:</strong> Input: <code>$0.075 / 1M tokens</code> | Output: <code>$0.30 / 1M tokens</code> (Standard Gemini 1.5/3.5 Flash rate).</span>
@@ -449,8 +449,10 @@
                                 <th>Timestamp</th>
                                 <th>Prompt</th>
                                 <th>Route Tag</th>
+                                <th>Source</th>
                                 <th>Arb Footprint</th>
                                 <th>Mono Footprint</th>
+                                <th>Token Source</th>
                                 <th>Lat.</th>
                                 <th>Savings</th>
                             </tr>
@@ -467,6 +469,10 @@
         <div style="display: flex; flex-direction: column; gap: 2rem;" id="hud-sidebar">
             <div class="hud-overlay">
                 <div class="hud-title">🤓 Stats for Nerds HUD</div>
+                <div class="hud-row">
+                    <span>Run Source:</span>
+                    <span class="hud-value" id="hud-run-source">unknown</span>
+                </div>
                 <div class="hud-row">
                     <span>Scout Model:</span>
                     <span class="hud-value" id="hud-scout-model">gemini-3.5-flash-lite</span>
@@ -502,8 +508,16 @@
                     <span class="hud-value" id="hud-scout-tokens">0</span>
                 </div>
                 <div class="hud-row">
+                    <span>Scout Token Source:</span>
+                    <span class="hud-value" id="hud-scout-token-source">unknown</span>
+                </div>
+                <div class="hud-row">
                     <span>Exec Node Context footprint:</span>
                     <span class="hud-value" id="hud-exec-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Token Source:</span>
+                    <span class="hud-value" id="hud-exec-token-source">unknown</span>
                 </div>
                 <div class="hud-row">
                     <span>Total Arbitrator Window:</span>
@@ -597,13 +611,17 @@
                 // Add to table
                 const tr = document.createElement('tr');
                 const date = new Date(run.timestamp * 1000).toLocaleTimeString();
+                const scoutSource = run.scout_token_source || 'unknown';
+                const nodeSource = run.node_token_source || 'unknown';
                 
                 tr.innerHTML = `
                     <td>${date}</td>
                     <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${run.prompt}</td>
                     <td><span class="badge ${run.scout_tag}">${run.scout_tag}</span></td>
+                    <td>${run.run_source || 'unknown'}</td>
                     <td>${run.arbitrator_in_tokens} t</td>
                     <td>${run.monolithic_in_tokens} t</td>
+                    <td>${scoutSource}/${nodeSource}</td>
                     <td>${run.total_latency.toFixed(2)}s</td>
                     <td style="color: var(--accent-success); font-weight: bold;">$${(run.cost_savings_usd || 0).toFixed(5)}</td>
                 `;
@@ -625,6 +643,7 @@
             // Load last run into HUD
             const last = history[0]; // history was reversed, so [0] is the latest
             if (last) {
+                document.getElementById('hud-run-source').innerText = last.run_source || 'unknown';
                 document.getElementById('hud-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';
                 document.getElementById('hud-exec-node').innerText = last.node_name.toUpperCase();
                 document.getElementById('hud-exec-latency').innerText = last.node_latency.toFixed(2) + 's';
@@ -633,7 +652,9 @@
                 document.getElementById('hud-hitl-intercept').innerText = last.hitl_escalated ? 'TRUE' : 'FALSE';
                 
                 document.getElementById('hud-scout-tokens').innerText = last.scout_input_tokens;
+                document.getElementById('hud-scout-token-source').innerText = last.scout_token_source || 'unknown';
                 document.getElementById('hud-exec-tokens').innerText = last.node_input_tokens;
+                document.getElementById('hud-exec-token-source').innerText = last.node_token_source || 'unknown';
                 document.getElementById('hud-arb-total-tokens').innerText = last.arbitrator_in_tokens;
                 document.getElementById('hud-mono-tokens').innerText = last.monolithic_in_tokens;
 

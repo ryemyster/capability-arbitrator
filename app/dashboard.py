@@ -62,10 +62,7 @@ async def run_agent(request: Request) -> StreamingResponse:
     payload = await request.json()
     prompt: str = payload.get("prompt", "")
 
-    # Enforce local integration test running logic
-    os.environ["INTEGRATION_TEST"] = "TRUE"
-
-    return StreamingResponse(event_generator(prompt), media_type="text/event-stream")
+    return StreamingResponse(event_generator(prompt, force_local=True), media_type="text/event-stream")
 
 
 def main() -> None:

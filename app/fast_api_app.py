@@ -194,7 +194,7 @@ def get_trace_event(event: Any) -> list[str]:
     return traces
 
 
-async def event_generator(prompt: str) -> AsyncGenerator[str, None]:
+async def event_generator(prompt: str, force_local: bool = False) -> AsyncGenerator[str, None]:
     """Generate server-sent events for prompt routing and trace execution."""
     yield f"data: {json.dumps({'type': 'trace', 'text': '🛡️ Security Screen: Scanning user prompt for PII and security threats...'})}\n\n"
     has_exec_node = False
@@ -204,6 +204,7 @@ async def event_generator(prompt: str) -> AsyncGenerator[str, None]:
             message=prompt,
             user_id="dashboard-user",
             session_id="dashboard-session",
+            run_config={"force_local": force_local},
         ):
             # Generate and yield verbose trace events
             for trace_text in get_trace_event(event):
@@ -243,10 +244,7 @@ async def run_agent(request: Request) -> StreamingResponse:
     payload = await request.json()
     prompt: str = payload.get("prompt", "")
 
-    # Enforce local integration test running logic
-    os.environ["INTEGRATION_TEST"] = "TRUE"
-
-    return StreamingResponse(event_generator(prompt), media_type="text/event-stream")
+    return StreamingResponse(event_generator(prompt, force_local=True), media_type="text/event-stream")
 
 
 # Main execution

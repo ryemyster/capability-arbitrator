@@ -112,7 +112,14 @@ def build_scout_node(capabilities: list[CapabilityDefinition]) -> FunctionNode:
         """Classifies the prompt and returns a capability tag plus confidence."""
         prompt = get_prompt_text(ctx) or (str(node_input) if node_input else "")
         if _is_dangerous_database_prompt(prompt):
-            record_scout("approval", 0.0, 0, 0, 100.0)
+            record_scout(
+                "approval",
+                0.0,
+                0,
+                0,
+                100.0,
+                token_source="deterministic_zero",
+            )
             return Event(
                 output={"capability_tag": "approval", "confidence_score": 100.0}
             )
