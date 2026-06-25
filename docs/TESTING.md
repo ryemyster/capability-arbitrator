@@ -142,4 +142,4 @@ Feature: Agent Runtime App Functionality
 > **MUST** update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
 
 ---
-*Last Updated: 2026-06-24T17:32:00-06:00 (Post-generalization bugfix verifying offline eval run completes and grades successfully).*
+*Last Updated: 2026-06-24T18:28:00-06:00 (Integrated Expanded Evaluation Scorecard Metrics: latency_seconds, token_efficiency, pii_redaction_accuracy).*
