@@ -128,6 +128,35 @@ Config: [`config/stride_self_healing.yaml`](../config/stride_self_healing.yaml).
 
 ---
 
+## 🤖 [EXPERIMENTAL] Ambient Supervisor Layer
+
+The Capability Arbitrator includes an experimental **Ambient Supervisor** layer — two always-on background observers that embody Google's definition of an *ambient agent*: an event-driven AI system that operates continuously in the background, monitoring data streams and taking autonomous action as events occur, rather than waiting for a human prompt.
+
+Think of each supervisor as a **factory manager watching the floor**. The factory (your agent system) runs normally; the manager observes every transaction and silently intervenes when something is off — no ticket, no command required.
+
+Each supervisor is independently toggled via a three-layer config:
+
+```
+Master enabled?        → false: complete no-op (overrides everything)
+  └─ Arbitrator enabled? → false: CLI invocation returns "disabled" message
+  └─ Ambient enabled?    → false: background observer routes "continue" without intervention
+```
+
+**Quality Flywheel ambient supervisor** — After every `save_run()` telemetry write, scans the violation window. If routing-confidence violations exceed the configured threshold, it logs the signal. In `optimize` mode it autonomously generates a corrected few-shot and opens a PR — no human prompt required.
+
+**STRIDE Self-Healing ambient supervisor** — After every `coding` or `stride` tagged agent run, audits the file involved. If STRIDE findings meet the severity threshold, it logs them. In `apply_patch` or `open_pr` mode it autonomously patches and verifies.
+
+**Configuration:**
+- `config/quality_flywheel.yaml` — flywheel surface control (`enabled / arbitrator / ambient / mode`)
+- `config/stride_self_healing.yaml` — STRIDE surface control (same three-layer shape)
+- Env var overrides: `QUALITY_FLYWHEEL_*` and `STRIDE_SELF_HEALING_*` (see `.env.example`)
+
+**Hook point:** Both supervisors are called from `telemetry.py:save_run()` via `on_run_saved()` in `app/app_utils/ambient_supervisor.py`. They never block the main agent flow — all errors are caught and logged.
+
+> **Status:** EXPERIMENTAL. Safe defaults ship disabled (`ambient.enabled: false`). Enable per-feature via config or env var. Do not use in production without testing in `observe_only` / `audit_only` mode first.
+
+---
+
 ## 📡 Ambient Event-Driven Pipeline
 
 To support background operations (such as automated pull request triage), the system can be triggered ambiently via Google Cloud Pub/Sub:

@@ -144,6 +144,13 @@ def _run_stride_heal(target: str, mode: str, dry_run: bool) -> None:
     config = load_self_healing_config()
     cfg = config["stride_self_healing"]
 
+    if not cfg.get("enabled", False):
+        print("[StrideHeal] Disabled (master flag). Set STRIDE_SELF_HEALING_ENABLED=true to activate.")
+        return
+    if not cfg.get("arbitrator", {}).get("enabled", True):
+        print("[StrideHeal] Arbitrator surface disabled. Set STRIDE_SELF_HEALING_ARBITRATOR_ENABLED=true.")
+        return
+
     print(f"\n=== STRIDE Self-Heal {'[DRY RUN] ' if dry_run else ''}(mode: {mode}) ===\n")
     findings, report = _stride_heal_audit(target, config, project_root)
     print(f"[StrideHeal] Found {len(findings)} actionable finding(s).")
@@ -178,7 +185,16 @@ def _run_flywheel(window: int, threshold: int, dry_run: bool) -> None:
     """Execute the Quality Flywheel optimization pipeline."""
     import pathlib
     from app.app_utils.flywheel_utils import generate_few_shot
+    from app.app_utils.flywheel_config_loader import load_flywheel_config
     from app.app_utils.kpi_config_loader import load_kpi_config
+
+    fw_cfg = load_flywheel_config()["quality_flywheel"]
+    if not fw_cfg.get("enabled", False):
+        print("[Flywheel] Disabled (master flag). Set QUALITY_FLYWHEEL_ENABLED=true to activate.")
+        return
+    if not fw_cfg.get("arbitrator", {}).get("enabled", True):
+        print("[Flywheel] Arbitrator surface disabled. Set QUALITY_FLYWHEEL_ARBITRATOR_ENABLED=true.")
+        return
 
     project_root = str(pathlib.Path(__file__).parent.parent)
     db_path = os.path.join(project_root, "telemetry_db.json")

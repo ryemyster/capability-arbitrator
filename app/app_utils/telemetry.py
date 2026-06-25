@@ -250,6 +250,14 @@ def save_run() -> dict[str, Any] | None:
     except Exception as e:
         print(f"Error saving telemetry: {e}")
 
+    # Notify ambient supervisors (experimental — never blocks the main flow)
+    try:
+        import pathlib
+        from app.app_utils.ambient_supervisor import on_run_saved
+        on_run_saved(run, str(pathlib.Path(DB_FILE).parent))
+    except Exception:
+        pass
+
     return run
 
 def get_history() -> list[dict[str, Any]]:

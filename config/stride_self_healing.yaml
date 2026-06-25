@@ -1,40 +1,24 @@
-# STRIDE Self-Healing Configuration
-# All secrets (GITHUB_TOKEN) live in environment variables — see .env.example.
-# This file stores policy only.
-
+# STRIDE Self-Healing — Three-layer surface control
+# [EXPERIMENTAL] Ambient supervisor mode. See docs/ARCHITECTURE.md for design notes.
+# Safe defaults: master disabled, arbitrator on, ambient off.
+# Do not store secrets in this file.
 stride_self_healing:
-  # Master kill-switch. Set SELF_HEALING_ENABLED=true in env to override.
-  enabled: false
-
-  # Escalating autonomy ladder:
-  #   audit_only    — print the STRIDE report, no file writes
-  #   propose_patch — generate and print the patch, no file writes
-  #   apply_patch   — write the patch and run verification locally
-  #   open_pr       — apply_patch + git branch + gh pr create
-  # Override with env var: SELF_HEALING_MODE=audit_only
-  mode: audit_only
-
+  enabled: false           # Master flag — false = complete no-op, overrides all surfaces
+  arbitrator:
+    enabled: true          # Direct CLI surface: `arbitrator stride-heal`
+  ambient:
+    enabled: false         # [EXPERIMENTAL] Event-driven background surface
+  mode: audit_only         # audit_only | propose_patch | apply_patch | open_pr
   detection:
-    # Minimum severity that triggers patch generation (low | medium | high).
     severity_threshold: medium
-
-    # Which vulnerability classes patch_agent is allowed to fix.
     checks:
       - hardcoded_secrets
       - unsafe_shell
       - missing_input_validation
-
   verification:
-    # Shell commands run after patch is written. All must exit 0 to pass.
     commands:
       - "uv run pytest tests/unit/ -x -q"
-
-    # Maximum patch-and-retry iterations before giving up.
     max_attempts: 3
-
   github:
-    # Base branch for auto-generated PRs.
     pr_base: develop
-
-    # Block `gh pr create` until a human has reviewed (mode=open_pr only).
     require_manual_review: true
