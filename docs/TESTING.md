@@ -52,6 +52,15 @@ We divide validation into:
 * **Code correctness tests** (pytest/Gherkin): Verify that the codebase compiles, loads configs, redacts PII, and runs nodes. (100% pass/fail criteria).
 * **LLM Scorecards** (Autonomous evals): Measure probabilistic accuracy, latencies, and token cost savings against a golden dataset using LLM-as-a-judge scorers.
 
+### 4. Runtime Guardrail Validation
+The Telemetry Watchdog is a runtime guardrail, not a normal answer-writing agent.
+That means we validate it in two layers:
+
+* **Deterministic watchdog tests:** [tests/unit/test_watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_watchdog_utils.py) creates mocked ADK session events with fake token counts and timestamps. These tests prove that normal runs pass through unchanged, token overruns prune context, and latency overruns switch the downstream model to the cheaper fallback.
+* **Eval scorecard signal:** [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) includes `watchdog_recovery_compliance` as a runtime-quality signal. This metric checks whether generated traces and telemetry agree with the budget behavior, but it is not the only proof of recovery because real 30-second or 10,000-token overruns would make evals slow, costly, and flaky.
+
+Use this rule of thumb: deterministic pytest proves watchdog mechanics, while evals monitor whether production-like traces continue to show healthy budget behavior.
+
 ---
 
 ## 📖 Active Gherkin Feature Library
@@ -142,4 +151,4 @@ Feature: Agent Runtime App Functionality
 > **MUST** update [docs/TESTING.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/TESTING.md) and [docs/kaggle_objectives.md](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
 
 ---
-*Last Updated: 2026-06-24T18:28:00-06:00 (Integrated Expanded Evaluation Scorecard Metrics: latency_seconds, token_efficiency, pii_redaction_accuracy).*
+*Last Updated: 2026-06-24T18:35:00-06:00 (Integrated Telemetry Watchdog Node and Phase 13 validation scripts).*

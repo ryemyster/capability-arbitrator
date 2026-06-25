@@ -10,7 +10,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Uses ADK 2.0 Graph (Workflow)**
     *   *What:* The agent is constructed as a conditional flowchart (nodes and edges) rather than a flat script.
-    *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined.
+    *   *Citation:* Completed in [app/agent.py:L269-273](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L269-273) where `root_workflow` is defined. *(Completed: Phase 13 [Telemetry Watchdog Node for Runtime Budget Guardrail] in [app/app_utils/watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/app_utils/watchdog_utils.py))*
 *   **[x] Implements Conditional Branching**
     *   *What:* Dynamic routing based on intent (routing "math" to calculations, "research" to LLM analysis, etc.).
     *   *Citation:* Completed in [app/agent.py:L125-136](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/app/agent.py#L252-267).
@@ -58,7 +58,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* Completed in [tests/integration/features/routing.feature](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/features/routing.feature) and resolved in [tests/integration/test_routing_bdd.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/integration/test_routing_bdd.py).
 *   **[x] Provides an Evaluation Scorecard**
     *   *What:* An autonomous validation system that generates traces and evaluates routing outcomes.
-    *   *Citation:* Completed via BDD test outcomes and verified in [tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py). *(Completed: Phase 6 [Autonomous Red-Teaming & LLM-as-a-Judge Loop] in [tests/scripts/phase6-deep-testing/test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py))*. *(Completed: Phase 12 [Expanded Evaluation Scorecard Metrics: latency_seconds, token_efficiency, pii_redaction_accuracy] in [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml))*.
+    *   *Citation:* Completed via BDD test outcomes and verified in [tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase5-enterprise-telemetry-and-logging/test_telemetry.py). *(Completed: Phase 6 [Autonomous Red-Teaming & LLM-as-a-Judge Loop] in [tests/scripts/phase6-deep-testing/test_deep_testing.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/scripts/phase6-deep-testing/test_deep_testing.py))*. *(Completed: Phase 12 [Expanded Evaluation Scorecard Metrics: latency_seconds, token_efficiency, pii_redaction_accuracy] in [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml))*. *(Completed: Phase 13 [Telemetry Watchdog recovery compliance metric and deterministic unit coverage] in [tests/eval/eval_config.yaml](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/eval/eval_config.yaml) and [tests/unit/test_watchdog_utils.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_watchdog_utils.py))*.
 *   **[x] Expanded Unit Tests**
     *   *What:* Additional developer-written tests targeting critical utility functions.
     *   *Citation:* Completed in [tests/unit/test_arbitrator.py](file:///Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/tests/unit/test_arbitrator.py).
@@ -88,5 +88,4 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 The following items are still required to achieve a gold-standard project submission:
 
 *All objectives are now completed and verified!*
-
 

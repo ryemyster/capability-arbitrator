@@ -90,7 +90,13 @@ Our graph contains thirteen distinct execution and monitoring nodes:
 *   **Stride Node (10):** A security threat modeling agent that maps architectural components to security threats.
 
 ### 4. Outbound Quality & Guardrails
-*   **Telemetry Watchdog (11):** Checks cumulative token usage and runtime latency during execution, triggering budget limits if targets are exceeded.
+*   **Telemetry Watchdog (11):** Think of this like a helpful watchdog that monitors how much time and money our agent is spending. At the end of every execution, it checks two conditions:
+    1. **Cumulative Session Tokens:** The total words/tokens processed in this chat session. If it exceeds **10,000 tokens**, the context is getting too large.
+    2. **Elapsed Duration (Latency):** How long the execution took. If it exceeds **30 seconds**, it is taking too long.
+    
+    If either budget is exceeded, the watchdog takes two corrective actions:
+    - **Context Pruning (Summarizing):** It asks Gemini to summarize the conversation history and replaces the long history with a single concise summary so that subsequent turns don't run out of memory.
+    - **Model Switching:** It switches the downstream model configuration to a cheaper/faster model (`gemini-2.0-flash-lite`) for the remainder of the session to save costs.
 *   **Compliance Judge (12):** Reviews output text for security risks (e.g. API keys generated in code blocks) and checks factual grounding before sending the response back to the user.
 
 ---
