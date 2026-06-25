@@ -38,6 +38,7 @@ from google.genai import types
 from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.config_loader import get_target_dir, load_arbitrator_config, load_mcp_configs
+from app.app_utils.compliance_judge_utils import compliance_judge
 from app.app_utils.devops_utils import devops_fn
 from app.app_utils.math_node_utils import math_fn
 from app.app_utils.scout_utils import build_scout_node
@@ -63,11 +64,14 @@ def router_node(ctx: Context, node_input: Any) -> Event:
     """Router node to redirect prompt based on Scout output."""
     if isinstance(node_input, dict):
         tag = node_input.get("capability_tag", "approval")
+        # On compliance retry, the judge injects an enriched prompt into the dict
+        prompt = node_input.get("prompt") or get_prompt_text(ctx) or str(node_input)
     elif hasattr(node_input, "capability_tag"):
         tag = getattr(node_input, "capability_tag")
+        prompt = get_prompt_text(ctx) or str(node_input)
     else:
         tag = str(node_input)
-    prompt = get_prompt_text(ctx) or str(node_input)
+        prompt = get_prompt_text(ctx) or str(node_input)
     return Event(output=prompt, route=tag)  # type: ignore
 
 router_fn = FunctionNode(name="router", func=router_node)
@@ -216,9 +220,12 @@ edges.append(Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE)
 if approval_fn not in terminal_nodes:
     terminal_nodes.append(approval_fn)
 
-# Wire all terminal nodes to the Telemetry Watchdog node
+# Wire all terminal nodes through the Compliance Judge before the Telemetry Watchdog
 for t_node in terminal_nodes:
-    edges.append(Edge(from_node=t_node, to_node=telemetry_watchdog))
+    edges.append(Edge(from_node=t_node, to_node=compliance_judge))
+
+edges.append(Edge(from_node=compliance_judge, to_node=telemetry_watchdog, route="safe"))
+edges.append(Edge(from_node=compliance_judge, to_node=router_fn, route="retry"))
 
 root_workflow = Workflow(
     name="root_agent",
