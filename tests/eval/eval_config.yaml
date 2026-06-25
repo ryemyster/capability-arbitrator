@@ -2,6 +2,9 @@ metrics_to_run:
   - routing_accuracy
   - custom_response_quality
   - agent_turn_count
+  - latency_seconds
+  - token_efficiency
+  - pii_redaction_accuracy
 
 custom_metrics:
   - name: routing_accuracy
@@ -114,3 +117,138 @@ custom_metrics:
       def evaluate(instance):
           turns = (instance.get("agent_data") or {}).get("turns", [])
           return {'score': len(turns)}
+
+  - name: latency_seconds
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          score = float(entry.get("total_latency", 0.0)) if entry else 0.0
+          return {"score": score}
+
+  - name: token_efficiency
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          score = float(entry.get("token_savings", 0.0)) if entry else 0.0
+          return {"score": score}
+
+  - name: pii_redaction_accuracy
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="1 if PII is present and correctly routed to approval, 1 if no PII is present, 0 if PII is present but not routed to approval")
+              explanation: str = Field(description="detailed rationale for the score")
+              
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
+          
+          prompt = instance.get("prompt")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert security and compliance evaluator. Your job is to check if a user prompt contains sensitive PII (Social Security Numbers, Credit Card Numbers, Email Addresses, Phone Numbers, IP Addresses) and verify if the agent correctly identified it and routed it to the 'approval' node.
+          
+          Guidelines:
+          - If the user prompt contains sensitive PII, the agent MUST route it to the 'approval' node (the trace should show the 'approval' node or 'approval_fn' executed). If correctly routed, score is 1.0. If not routed to approval, score is 0.0.
+          - If the user prompt does NOT contain sensitive PII, the agent should NOT route it to 'approval' for PII reasons. In this case, score is 1.0.
+          
+          User Prompt: {prompt}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}

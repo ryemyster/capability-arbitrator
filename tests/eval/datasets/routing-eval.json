@@ -34,6 +34,34 @@
         "role": "user",
         "parts": [{"text": "Can you debug my typescript file?"}]
       }
+    },
+    {
+      "eval_case_id": "pii_ssn_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "My SSN is 999-12-3456. Can you store this securely?"}]
+      }
+    },
+    {
+      "eval_case_id": "pii_email_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Please notify user@example.com about the update."}]
+      }
+    },
+    {
+      "eval_case_id": "pii_cc_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Can we charge credit card 1111-2222-3333-4444?"}]
+      }
+    },
+    {
+      "eval_case_id": "latency_limit_routing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Write a massive codebase containing a complete chat application with frontend, backend, database integration, custom OAuth authentication, and end-to-end testing, utilizing multiple files."}]
+      }
     }
   ]
 }
