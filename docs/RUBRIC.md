@@ -1,34 +1,55 @@
-# The Master Rubric for a "Gold-Standard" Submission
+# Compliance & Rubric Alignment Guide
+### Mapping System Implementations to Kaggle Capstone Criteria
 
-Use this checklist to ensure you have covered the high-leverage technical points.
+This guide maps each technical requirement from the Kaggle Capstone rubric to its exact implementation in the Capability Arbitrator codebase.
 
-## Requirements & Best Practices
+---
 
-### Architecture (ADK)
-- [ ] Uses ADK 2.0 Graph (Workflow) with clearly defined nodes and edges.
-- [ ] Implements conditional branching (e.g., routing based on intent).
-- [ ] Includes a Human-in-the-Loop (HITL) node for high-risk actions.
+## Evaluation and Compliance Matrix
 
-### Specialization (Skills)
-- [ ] Features at least one custom Agent Skill in `.agents/skills/`.
-- [ ] Skill utilizes Progressive Disclosure (loads only when relevant).
-- [ ] Includes few-shot examples or a script in the skill folder.
+Our compliance requirements are categorized into four execution layers:
 
-### Interoperability (MCP)
-- [ ] Connects to at least one MCP Server (Local or Remote).
-- [ ] Agent uses MCP tools to ground responses in real-time data.
+| Layer | Requirement | Implementation Strategy | Code Citation |
+| :--- | :--- | :--- | :--- |
+| **Runtime Guardrails** | ADK 2.0 Graph | Graph nodes and edge transitions | [app/agent.py:L269-273](app/agent.py#L269-273) |
+| | Conditional Branching | Dynamic routing by classification | [app/agent.py:L125-136](app/agent.py#L125-136) |
+| | Security Screen | GDPR-scoped PII regex detector and HITL escalation gate | [app/agent.py](app/agent.py), [SECURITY.md](docs/SECURITY.md) |
+| | Output Safety Gate | Compliance judge scans outputs for secret leaks, auto-heals | [app/app_utils/compliance_judge_utils.py](app/app_utils/compliance_judge_utils.py) |
+| | KPI Outcome Auditor | Product KPI Auditor checks all 5 KPI thresholds per transaction and writes verdicts to telemetry for eval scorecard integration | [app/app_utils/product_agent_utils.py](app/app_utils/product_agent_utils.py) |
+| | Quality Flywheel | Opt-in offline optimizer: reads telemetry violations, generates improved few-shots via Gemini, validates routing accuracy, opens PR when enabled and triggered | [app/app_utils/flywheel_utils.py](../app/app_utils/flywheel_utils.py), [config/kpi_config.yaml](../config/kpi_config.yaml) |
+| | STRIDE Self-Healing | Opt-in security loop: audits a file via STRIDE, generates a targeted patch via patch_agent, verifies with pytest, opens PR only in `open_pr` mode | [app/app_utils/patch_agent_utils.py](../app/app_utils/patch_agent_utils.py), [app/skills/patch_agent/SKILL.md](../app/skills/patch_agent/SKILL.md), [config/stride_self_healing.yaml](../config/stride_self_healing.yaml) |
+| | Ambient Supervisor Hook | Experimental telemetry hook: observes/logs Flywheel and STRIDE signals after `save_run()`; does not patch or open PRs in current implementation | [app/app_utils/ambient_supervisor.py](../app/app_utils/ambient_supervisor.py) |
+| | Persistent Rules | Workspace context file | [.agents/CONTEXT.md](.agents/CONTEXT.md) |
+| | Human-in-the-Loop | Interrupted execution approval | [app/agent.py:L138-156](app/agent.py#L138-156) |
+| **CI/CD Checks** | Quality Linter | AST code metric constraints | [scripts/agent_quality_check.py](scripts/agent_quality_check.py) |
+| | BDD Verification | Gherkin integration routing | [test_routing_bdd.py](tests/integration/test_routing_bdd.py) |
+| | Pytest Suite | Unit/Integration testing | [tests/unit/](tests/unit/) |
+| **Runtime Evals** | Scorecard Evals | LLM-as-a-Judge evaluations | [test_deep_testing.py](tests/scripts/phase6-deep-testing/test_deep_testing.py) |
+| | Threat Modeling | STRIDE vulnerability checking | [stride/SKILL.md](app/skills/stride/SKILL.md), [SECURITY.md](docs/SECURITY.md) |
+| **Dev & Dashboard** | Telemetry HUD | Dashboard UI & visual metrics | [app/fast_api_app.py](app/fast_api_app.py) |
+| | Grounded Tools | Filesystem MCP server setup | [app/agent.py:L187-204](app/agent.py#L187-204) |
+| | Few-Shot Examples | In-context skill exemplars | [researcher/few_shots.json](app/skills/researcher/few_shots.json) |
 
-### Security & Safety
-- [ ] Implements a Security Screen (PII redaction or injection defense).
-- [x] Uses a Persistent Context file (`CONTEXT.md`) for guardrails.
-- [ ] (Optional) Implements a STRIDE Threat Modeling skill.
+---
 
-### Quality & Eval
-- [ ] Uses Gherkin syntax for behavior-driven specifications.
-- [ ] Provides evidence of an Evaluation Scorecard (LLM-as-judge).
-- [ ] Code passes Automated Linting (`agents-cli lint`).
+## Implementation Details and Verification
 
-### Deployment
-- [ ] Successfully deployed to Agent Runtime or Cloud Run.
-- [ ] (Optional) Uses a FastAPI Manager Dashboard for the frontend.
-- [ ] Uses Pub/Sub for event-driven "Ambient" triggers.
+### 1. Prototype Runtime Guardrails
+*   **Decoupled Intent Classification:** The system uses `llm_scout_fn` to classify incoming prompt intent into capability tags *before* pulling heavy resources into the context window ([app/agent.py:L93-121](app/agent.py#L93-121)).
+*   **Security Gating:** The `security_screen` intercepts the prompt first to detect credit cards, SSNs, phone numbers, IP addresses, and email addresses. If PII is found, it automatically overrides normal routing and escalates directly to human approval.
+*   **Human-in-the-Loop (HITL) Interruption:** When executing high-risk commands or handling low-confidence routing, the graph suspends execution using a custom `RequestInput` node ([app/agent.py:L138-156](app/agent.py#L138-156)).
+
+### 2. GitHub Agent Validation Gates
+*   **Automated Quality Auditor:** Running `agent_quality_check.py` parses modified files to block commits that violate function lengths (>50 lines), module documentation, typing rules, or duplicate prompts.
+*   **Gherkin BDD specs:** Our behavior-driven specifications map natural-language routing requirements in [features/routing.feature](tests/integration/features/routing.feature) to code validations.
+*   **Local runtime smoke:** The manual `Local Runtime Smoke` workflow starts the dashboard, checks local routes, runs arbitrator CLI commands, and tears the process down without deploying to cloud.
+
+### 3. Offline Evaluation & Scoring
+*   **LLM-as-a-Judge scorecard:** Dynamic red-teaming tasks generated by `DeepTester` are run against `mock_app` and graded by `OutcomeJudge` to report Token Saturation (TSR) and Cost reduction efficiency (CpE) ([test_deep_testing.py:L192-256](tests/scripts/phase6-deep-testing/test_deep_testing.py#L192-256)).
+
+---
+
+## Security and Privacy Notice
+
+> [!CAUTION]
+> **Secret Redaction Compliance:** Do not commit `.env` configuration files to version control. The pre-commit quality gate checks the workspace and will reject commits containing raw credentials or plain-text secrets.

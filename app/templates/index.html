@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capability Arbitrator - Governance & Telemetry Dashboard</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0b0d19 0%, #06070c 100%);
+            --panel-bg: rgba(255, 255, 255, 0.03);
+            --panel-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.4);
+            --accent-success: #10b981;
+            --accent-success-glow: rgba(16, 185, 129, 0.3);
+            --accent-alert: #f43f5e;
+            --accent-alert-glow: rgba(244, 63, 94, 0.3);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
+            line-height: 1.47;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 1.5rem clamp(1.25rem, 4vw, 4rem);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: rgba(11, 13, 25, 0.7);
+        }
+
+        header h1 {
+            font-size: 1.625rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(90deg, #a5b4fc, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            letter-spacing: -0.01em;
+            margin-top: 0.2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+            gap: 2rem;
+            padding: 2rem clamp(1.25rem, 4vw, 4rem);
+        }
+
+        .dashboard-grid > * {
+            min-width: 0;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+            opacity: 0.3;
+        }
+
+        .card h2 {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8125rem;
+            gap: 0.5rem;
+        }
+
+        .hud-value {
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            font-weight: 500;
+            color: #ffffff;
+            word-break: break-all;
+            text-align: right;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .stat-box:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            color: #ffffff;
+        }
+
+        .stat-value.savings {
+            color: var(--accent-success);
+        }
+
+        .stat-label {
+            font-size: 0.6875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .stat-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .stat-sublabel {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+            margin-top: 0.4rem;
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            letter-spacing: 0.02em;
+        }
+
+        .info-tip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            font-size: 0.6rem;
+            font-style: italic;
+            font-weight: 700;
+            cursor: help;
+            position: relative;
+            text-transform: none;
+            flex-shrink: 0;
+        }
+
+        .info-tip:hover {
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .info-tip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 150%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            background: #0b0b12;
+            border: 1px solid var(--panel-border);
+            color: var(--text-secondary, #c8c8d0);
+            padding: 0.65rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 1.45;
+            text-transform: none;
+            letter-spacing: normal;
+            text-align: left;
+            z-index: 50;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+            pointer-events: none;
+        }
+
+        /* Playground form */
+        .playground-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            padding: 1rem;
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .btn-run {
+            background: var(--accent-primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            font-size: 0.9375rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            align-self: flex-end;
+            box-shadow: 0 4px 14px var(--accent-glow);
+        }
+
+        .btn-run:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--accent-glow);
+        }
+
+        .terminal {
+            background: #020306;
+            border: 1px solid var(--panel-border);
+            border-radius: 12px;
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            font-size: 0.8125rem;
+            padding: 1.5rem;
+            height: 250px;
+            overflow-y: auto;
+            color: #a7f3d0;
+            margin-top: 1.5rem;
+            white-space: pre-wrap;
+        }
+
+        /* Stats for Nerds overlay */
+        .hud-overlay {
+            background: rgba(11, 13, 25, 0.85);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .hud-title {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent-primary);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .hud-value.glow {
+            color: var(--accent-success);
+        }
+
+        /* History log table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.8125rem;
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--panel-border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.01);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .badge.research { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+        .badge.coding { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .badge.math { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge.devops { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .badge.stride { background: rgba(244, 63, 94, 0.15); color: #fb7185; }
+        .badge.approval { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .toggle-hud {
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--panel-border);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .toggle-hud:hover {
+            background: var(--accent-primary);
+        }
+
+        @media (max-width: 1400px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                padding: 2rem clamp(1rem, 3vw, 3rem);
+            }
+
+            #hud-sidebar {
+                order: -1;
+            }
+
+            .hud-overlay {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0 2rem;
+            }
+
+            .hud-title {
+                grid-column: 1 / -1;
+            }
+
+            .progress-bar-container {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 1rem 1.25rem;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            header h1 {
+                font-size: 1.3rem;
+            }
+
+            .dashboard-grid {
+                padding: 1rem;
+                gap: 1rem;
+            }
+
+            .card {
+                padding: 1.25rem;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .hud-overlay {
+                grid-template-columns: 1fr;
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 0.78rem;
+            }
+
+            th, td {
+                padding: 0.5rem 0.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Capability Arbitrator</h1>
+            <div class="subtitle">Outcome Governance & Live Telemetry Console</div>
+        </div>
+        <button class="toggle-hud" onclick="toggleHud()">Toggle Stats HUD</button>
+    </header>
+
+    <div class="dashboard-grid">
+        <!-- Main Panel: Stats and Playground -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div class="card">
+                <h2>📊 Cumulative Efficiency Gains</h2>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value savings" id="val-total-savings">0.00%</div>
+                        <div class="stat-label-row">
+                            <span class="stat-label">Token Savings Rate</span>
+                            <span class="info-tip" data-tip="Share of LLM tokens avoided vs. a 'monolithic' baseline — sending the whole task to one large prompt with every tool and instruction loaded. The arbitrator instead classifies intent, loads only the matching branch, and routes math/devops to deterministic code (0 tokens). Higher = cheaper.">i</span>
+                        </div>
+                        <div class="stat-sublabel" id="val-total-savings-detail">vs. one all-in-one prompt</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value savings" id="val-cost-savings">$0.00</div>
+                        <div class="stat-label">Est. Financial Savings</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-avg-scout-ttft">0.00s</div>
+                        <div class="stat-label">Scout Node TTFT</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value savings" id="val-offload-rate">0.00%</div>
+                        <div class="stat-label">Deterministic Offload</div>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-pii-blocked">0</div>
+                        <div class="stat-label">PII Screens Triggered</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-hitl-escalations">0</div>
+                        <div class="stat-label">HITL Interrupt events</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-mcp-calls">0</div>
+                        <div class="stat-label">MCP Tool Actions</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--panel-border); display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                    <div>
+                        <strong>How Savings are Calculated:</strong> Rows come from persisted agent telemetry in <code>telemetry_db.json</code>. Scout tokens are actual when the GenAI response reports usage. Deterministic nodes report zero execution tokens. LLM execution-node tokens are estimated when ADK does not expose exact downstream usage. The monolithic comparison is always a baseline estimate.
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                        <span>💲 <strong>Pricing Tier:</strong> Input: <code>$0.075 / 1M tokens</code> | Output: <code>$0.30 / 1M tokens</code> (Standard Gemini 1.5/3.5 Flash rate).</span>
+                        <a href="https://cloud.google.com/vertex-ai/generative-ai/pricing" target="_blank" style="color: var(--accent-primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 0.25rem;">
+                            Vertex AI Gemini Pricing ↗
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- outcomes.md KPI explanation card -->
+            <div class="card" style="background: rgba(99, 102, 241, 0.04); border-color: rgba(99, 102, 241, 0.15);">
+                <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.75rem; color: #a5b4fc; display: flex; align-items: center; gap: 0.5rem;">
+                    💡 Progressive Disclosure Math: Verifying Outcomes
+                </h3>
+                <p style="font-size: 0.85rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 1rem;">
+                    Standard agents suffer from <strong>"Context Rot"</strong> (KPI 1.1) by hoarding every tool context (~13,000 baseline tokens). We dynamically load only what is needed, maximizing your reasoning budget.
+                </p>
+                <div class="two-col" style="margin-bottom: 1rem;">
+                    <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid rgba(244, 63, 94, 0.15); border-radius: 8px; padding: 0.75rem;">
+                        <div style="font-size: 0.6875rem; font-weight: 600; color: #fb7185; text-transform: uppercase; letter-spacing: 0.06em;">Monolithic Prompting (Bloated)</div>
+                        <div style="font-family: 'SF Mono','Monaco','Menlo',ui-monospace,monospace; font-size: 0.8125rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="mono-tsr-val">~10%</span> (Context Rot)</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Tool Bloat: 100% (5/5 loaded)</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 0.75rem;">
+                        <div style="font-size: 0.6875rem; font-weight: 600; color: #34d399; text-transform: uppercase; letter-spacing: 0.06em;">Capability Arbitrated (Lean)</div>
+                        <div style="font-family: 'SF Mono','Monaco','Menlo',ui-monospace,monospace; font-size: 0.8125rem; color: #ffffff; margin-top: 0.25rem;">TSR: <span id="arb-tsr-val">>85%</span> (Optimal reasoning)</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">Tool Bloat: <span id="arb-bloat-val">0%</span></div>
+                    </div>
+                </div>
+                <p style="font-size: 0.85rem; line-height: 1.5; color: var(--text-muted); margin-bottom: 1rem;">
+                    <strong>Outcome:</strong> Real-time token tracking proves that separating intent classification (Scout Node) from execution prevents hallucination (KPI 2.2) and secures operations (KPI 3.1) with zero overhead.
+                </p>
+
+                <!-- Dynamic active run outcomes box -->
+                <div id="live-run-outcome-box" style="display: none; background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 1rem;">
+                    <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-success); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span>🎯 LATEST RUN VERIFIED OUTCOMES (OUTCOMES.md)</span>
+                        <span id="live-run-route-badge" class="badge"></span>
+                    </div>
+                    <div class="two-col" style="font-size: 0.8rem;">
+                        <div>
+                            <strong>Context Window Efficiency (KPI 1.1)</strong>
+                            <ul style="margin-left: 1.25rem; margin-top: 0.25rem; color: var(--text-muted); line-height: 1.4;">
+                                <li>Saved Tokens: <span id="live-saved-tokens" style="color: #ffffff; font-weight: bold;">0</span></li>
+                                <li>Reduction Rate: <span id="live-reduction-rate" style="color: var(--accent-success); font-weight: bold;">0.00%</span></li>
+                                <li>Tool Bloat Ratio: <span id="live-tool-bloat" style="color: var(--accent-success);">0%</span></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Execution & Quality (KPI 2.1 & 2.2)</strong>
+                            <ul style="margin-left: 1.25rem; margin-top: 0.25rem; color: var(--text-muted); line-height: 1.4;">
+                                <li>Scout Latency: <span id="live-scout-latency" style="color: #ffffff;">0.00s</span></li>
+                                <li>Task Duration: <span id="live-task-duration" style="color: #ffffff;">0.00s</span></li>
+                                <li>Offload Status: <span id="live-offload-status" style="font-weight: bold;">Dynamic LLM</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>⚡ Interactive Routing Playground</h2>
+                <div class="playground-form">
+                    <textarea id="prompt-input" placeholder="Type a prompt to test routing (e.g. 'Solve (12.5 * 40) / 5' or 'Conduct academic research on quantum computing')"></textarea>
+                    <button class="btn-run" onclick="runPrompt()">Execute Prompt</button>
+                </div>
+                <div class="two-col" style="margin-top: 1.5rem;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-success); display: flex; align-items: center; gap: 0.25rem;">🤖 Model Response:</div>
+                        <div class="terminal" id="terminal-out" style="height: 300px; margin-top: 0;">Response output will stream here...</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--accent-primary); display: flex; align-items: center; gap: 0.25rem;">⛓️ Live Arbitration Trace:</div>
+                        <div class="terminal" id="trace-out" style="height: 300px; margin-top: 0; color: #a5b4fc; border-color: rgba(99,102,241,0.2);">Trace steps will appear here...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📜 Execution History Log</h2>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Prompt</th>
+                                <th>Route Tag</th>
+                                <th>Source</th>
+                                <th>Arb Footprint</th>
+                                <th>Mono Footprint</th>
+                                <th>Token Source</th>
+                                <th>Lat.</th>
+                                <th>Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="history-pagination" style="display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; gap: 0.5rem;">
+                    <button id="page-prev" onclick="historyChangePage(-1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); color: var(--text-main); border-radius: 6px; padding: 0.375rem 0.75rem; font-size: 0.8125rem; cursor: pointer;">← Prev</button>
+                    <span id="page-info" style="font-size: 0.8125rem; color: var(--text-muted);"></span>
+                    <button id="page-next" onclick="historyChangePage(1)" style="background: rgba(255,255,255,0.06); border: 1px solid var(--panel-border); color: var(--text-main); border-radius: 6px; padding: 0.375rem 0.75rem; font-size: 0.8125rem; cursor: pointer;">Next →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar: Stats for Nerds HUD -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;" id="hud-sidebar">
+            <div class="hud-overlay">
+                <div class="hud-title">🤓 Stats for Nerds HUD</div>
+                <div class="hud-row">
+                    <span>Run Source:</span>
+                    <span class="hud-value" id="hud-run-source">unknown</span>
+                </div>
+                <div class="hud-row">
+                    <span>Scout Model:</span>
+                    <span class="hud-value" id="hud-scout-model">…</span>
+                </div>
+                <div class="hud-row">
+                    <span>Scout Latency (TTFT):</span>
+                    <span class="hud-value" id="hud-scout-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>Active Exec Node:</span>
+                    <span class="hud-value glow" id="hud-exec-node">None</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Node Latency:</span>
+                    <span class="hud-value" id="hud-exec-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>Total Tracing Latency:</span>
+                    <span class="hud-value" id="hud-total-latency">0.00s</span>
+                </div>
+                <div class="hud-row">
+                    <span>PII Detected:</span>
+                    <span class="hud-value" id="hud-pii-detected">False</span>
+                </div>
+                <div class="hud-row">
+                    <span>HITL Intercept:</span>
+                    <span class="hud-value" id="hud-hitl-intercept">False</span>
+                </div>
+                
+                <div class="hud-title" style="margin-top: 1rem;">Token Saturation Profile</div>
+                <div class="hud-row">
+                    <span>Scout Context footprint:</span>
+                    <span class="hud-value" id="hud-scout-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Scout Token Source:</span>
+                    <span class="hud-value" id="hud-scout-token-source">unknown</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Node Context footprint:</span>
+                    <span class="hud-value" id="hud-exec-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Exec Token Source:</span>
+                    <span class="hud-value" id="hud-exec-token-source">unknown</span>
+                </div>
+                <div class="hud-row">
+                    <span>Total Arbitrator Window:</span>
+                    <span class="hud-value glow" id="hud-arb-total-tokens">0</span>
+                </div>
+                <div class="hud-row">
+                    <span>Simulated Monolithic Prompt:</span>
+                    <span class="hud-value" style="color: var(--accent-alert);" id="hud-mono-tokens">0</span>
+                </div>
+                
+                <div class="hud-title" style="margin-top: 1rem;">Progressive Disclosure Gain</div>
+                <div class="hud-row">
+                    <span>Context Window Reduction:</span>
+                    <span class="hud-value glow" id="hud-reduction-pct">0.00%</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="hud-reduction-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleHud() {
+            const sidebar = document.getElementById('hud-sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'flex' : 'none';
+        }
+
+        async function fetchMetrics() {
+            try {
+                const res = await fetch('/api/metrics');
+                const history = await res.json();
+                updateDashboard(history);
+            } catch (err) {
+                console.error("Error fetching metrics:", err);
+            }
+        }
+
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const cfg = await res.json();
+                if (cfg.model) {
+                    document.getElementById('hud-scout-model').innerText = cfg.model;
+                }
+            } catch (err) {
+                console.error("Error fetching config:", err);
+            }
+        }
+
+        function appendTrace(text) {
+            const traceDiv = document.getElementById('trace-out');
+            if (traceDiv.innerText === "Trace steps will appear here...") {
+                traceDiv.innerText = '';
+            }
+            const span = document.createElement('div');
+            span.style.marginBottom = '0.45rem';
+            span.style.lineHeight = '1.4';
+            span.style.fontSize = '0.85rem';
+            
+            if (text.includes('✅') || text.startsWith('🏁')) {
+                span.style.color = '#34d399'; // success green
+            } else if (text.includes('🚨')) {
+                span.style.color = '#fb7185'; // alert rose
+            } else if (text.includes('🎯') || text.includes('🧠')) {
+                span.style.color = '#818cf8'; // scout indigo
+            } else if (text.includes('🔀')) {
+                span.style.color = '#fbbf24'; // router amber
+            } else {
+                span.style.color = '#cbd5e1'; // gray
+            }
+            span.innerText = text;
+            traceDiv.appendChild(span);
+            traceDiv.scrollTop = traceDiv.scrollHeight;
+        }
+
+        const HISTORY_PAGE_SIZE = 15;
+        let historyRows = [];
+        let historyPage = 0;
+
+        function renderHistoryPage() {
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+            const start = historyPage * HISTORY_PAGE_SIZE;
+            const pageItems = historyRows.slice(start, start + HISTORY_PAGE_SIZE);
+            pageItems.forEach(run => {
+                const tr = document.createElement('tr');
+                const date = new Date(run.timestamp * 1000).toLocaleTimeString();
+                const scoutSource = run.scout_token_source || 'unknown';
+                const nodeSource = run.node_token_source || 'unknown';
+                tr.innerHTML = `
+                    <td>${date}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${run.prompt}</td>
+                    <td><span class="badge ${run.scout_tag}">${run.scout_tag}</span></td>
+                    <td>${run.run_source || 'unknown'}</td>
+                    <td>${run.arbitrator_in_tokens} t</td>
+                    <td>${run.monolithic_in_tokens} t</td>
+                    <td>${scoutSource}/${nodeSource}</td>
+                    <td>${run.total_latency.toFixed(2)}s</td>
+                    <td style="color: var(--accent-success); font-weight: bold;">$${(run.cost_savings_usd || 0).toFixed(5)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            const totalPages = Math.ceil(historyRows.length / HISTORY_PAGE_SIZE);
+            document.getElementById('page-info').innerText = `Page ${historyPage + 1} of ${totalPages} · ${historyRows.length} runs`;
+            document.getElementById('page-prev').disabled = historyPage === 0;
+            document.getElementById('page-next').disabled = historyPage >= totalPages - 1;
+            document.getElementById('page-prev').style.opacity = historyPage === 0 ? '0.35' : '1';
+            document.getElementById('page-next').style.opacity = historyPage >= totalPages - 1 ? '0.35' : '1';
+        }
+
+        function historyChangePage(delta) {
+            const totalPages = Math.ceil(historyRows.length / HISTORY_PAGE_SIZE);
+            historyPage = Math.max(0, Math.min(historyPage + delta, totalPages - 1));
+            renderHistoryPage();
+        }
+
+        function updateDashboard(history) {
+            if (!history || history.length === 0) return;
+
+            // Compute totals across all items (before capping for display)
+            let totalArbTokens = 0;
+            let totalMonoTokens = 0;
+            let totalCostSaved = 0;
+            let totalScoutTTFT = 0;
+            let piiCount = 0;
+            let hitlCount = 0;
+            let totalMcpCalls = 0;
+            let devopsCount = 0;
+
+            const reversed = history.slice().reverse();
+            reversed.forEach(run => {
+                totalArbTokens += run.arbitrator_in_tokens + run.arbitrator_out_tokens;
+                totalMonoTokens += run.monolithic_in_tokens + run.monolithic_out_tokens;
+                totalCostSaved += run.cost_savings_usd || 0;
+                totalScoutTTFT += run.scout_latency || 0;
+                if (run.pii_detected) piiCount++;
+                if (run.hitl_escalated) hitlCount++;
+                totalMcpCalls += run.mcp_tool_calls || 0;
+                if (run.scout_tag === 'math' || run.scout_tag === 'devops') devopsCount++;
+            });
+
+            // Cap table to last 100 runs
+            historyRows = reversed.slice(0, 100);
+            historyPage = 0;
+            renderHistoryPage();
+
+            // Update stats cards
+            const savingsRate = totalMonoTokens > 0 ? ((totalMonoTokens - totalArbTokens) / totalMonoTokens) * 100 : 0;
+            const offloadRate = reversed.length > 0 ? (devopsCount / reversed.length) * 100 : 0;
+
+            document.getElementById('val-total-savings').innerText = savingsRate.toFixed(2) + '%';
+            const fmtTok = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(Math.round(n));
+            document.getElementById('val-total-savings-detail').innerText = totalMonoTokens > 0
+                ? `${fmtTok(totalMonoTokens)} baseline → ${fmtTok(totalArbTokens)} actual`
+                : 'vs. one all-in-one prompt';
+            document.getElementById('val-cost-savings').innerText = '$' + totalCostSaved.toFixed(5);
+            document.getElementById('val-avg-scout-ttft').innerText = (totalScoutTTFT / reversed.length).toFixed(2) + 's';
+            document.getElementById('val-offload-rate').innerText = offloadRate.toFixed(2) + '%';
+            document.getElementById('val-pii-blocked').innerText = piiCount;
+            document.getElementById('val-hitl-escalations').innerText = hitlCount;
+            document.getElementById('val-mcp-calls').innerText = totalMcpCalls;
+
+            // Load last run into HUD
+            const last = reversed[0];
+            if (last) {
+                document.getElementById('hud-run-source').innerText = last.run_source || 'unknown';
+                document.getElementById('hud-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';
+                document.getElementById('hud-exec-node').innerText = last.node_name.toUpperCase();
+                document.getElementById('hud-exec-latency').innerText = last.node_latency.toFixed(2) + 's';
+                document.getElementById('hud-total-latency').innerText = last.total_latency.toFixed(2) + 's';
+                document.getElementById('hud-pii-detected').innerText = last.pii_detected ? 'TRUE' : 'FALSE';
+                document.getElementById('hud-hitl-intercept').innerText = last.hitl_escalated ? 'TRUE' : 'FALSE';
+                
+                document.getElementById('hud-scout-tokens').innerText = last.scout_input_tokens;
+                document.getElementById('hud-scout-token-source').innerText = last.scout_token_source || 'unknown';
+                document.getElementById('hud-exec-tokens').innerText = last.node_input_tokens;
+                document.getElementById('hud-exec-token-source').innerText = last.node_token_source || 'unknown';
+                document.getElementById('hud-arb-total-tokens').innerText = last.arbitrator_in_tokens;
+                document.getElementById('hud-mono-tokens').innerText = last.monolithic_in_tokens;
+
+                const diffPct = last.monolithic_in_tokens > 0 ? ((last.monolithic_in_tokens - last.arbitrator_in_tokens) / last.monolithic_in_tokens) * 100 : 0;
+                document.getElementById('hud-reduction-pct').innerText = diffPct.toFixed(2) + '%';
+                document.getElementById('hud-reduction-bar').style.width = diffPct.toFixed(0) + '%';
+
+                // Update dynamic outcomes card from OUTCOMES.md
+                const liveBox = document.getElementById('live-run-outcome-box');
+                if (liveBox) {
+                    liveBox.style.display = 'block';
+                    document.getElementById('live-run-route-badge').className = `badge ${last.scout_tag}`;
+                    document.getElementById('live-run-route-badge').innerText = last.scout_tag;
+                    document.getElementById('live-saved-tokens').innerText = last.token_savings.toLocaleString();
+                    document.getElementById('live-reduction-rate').innerText = diffPct.toFixed(2) + '%';
+                    
+                    const bloatVal = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? '0% (Deterministic Code Offload)' : '20% (1/5 active skills loaded)';
+                    document.getElementById('live-tool-bloat').innerText = bloatVal;
+                    
+                    document.getElementById('live-scout-latency').innerText = last.scout_latency.toFixed(2) + 's';
+                    document.getElementById('live-task-duration').innerText = last.total_latency.toFixed(2) + 's';
+                    
+                    const offloadStatus = document.getElementById('live-offload-status');
+                    if (last.scout_tag === 'math' || last.scout_tag === 'devops') {
+                        offloadStatus.innerText = '100% Deterministic DevOps Offload';
+                        offloadStatus.style.color = '#34d399';
+                    } else {
+                        offloadStatus.innerText = 'Dynamic Progressive Disclosure LLM';
+                        offloadStatus.style.color = '#a5b4fc';
+                    }
+
+                    // TSR calculation
+                    const promptTokens = Math.max(10, Math.floor(last.prompt.length / 4));
+                    const activeSkillTokens = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? 0 : last.node_input_tokens;
+                    const monoTsr = ((promptTokens + activeSkillTokens) / last.monolithic_in_tokens * 100);
+                    const arbTsr = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? 100 : ((promptTokens + activeSkillTokens) / last.arbitrator_in_tokens * 100);
+                    
+                    document.getElementById('mono-tsr-val').innerText = monoTsr.toFixed(1) + '%';
+                    document.getElementById('arb-tsr-val').innerText = arbTsr.toFixed(1) + '%';
+                    document.getElementById('arb-bloat-val').innerText = (last.scout_tag === 'math' || last.scout_tag === 'devops') ? '0% (No LLM tools loaded)' : '20% (Pruned 4/5 skills)';
+                }
+            }
+        }
+
+        async function runPrompt() {
+            const promptInput = document.getElementById('prompt-input');
+            const term = document.getElementById('terminal-out');
+            const trace = document.getElementById('trace-out');
+            const prompt = promptInput.value.trim ? promptInput.value.trim() : promptInput.value;
+            if (!prompt) return;
+
+            term.innerText = "Initializing connection to Capability Arbitrator...\n";
+            trace.innerText = "Initializing Live Arbitration Trace...\n";
+            promptInput.value = '';
+
+            try {
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                term.innerText = '';
+                trace.innerText = '';
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        if (buffer) {
+                            processLines(buffer);
+                        }
+                        break;
+                    }
+
+                    buffer += decoder.decode(value, { stream: true });
+                    buffer = processLines(buffer);
+                    term.scrollTop = term.scrollHeight;
+                }
+
+                function processLines(text) {
+                    const parts = text.split('\n');
+                    const remainder = parts.pop();
+                    for (const line of parts) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(trimmed.slice(6));
+                                if (data.type === 'content') {
+                                    term.innerText += data.text;
+                                } else if (data.type === 'trace') {
+                                    appendTrace(data.text);
+                                } else if (data.type === 'output') {
+                                    term.innerText += "\n\n[Output Event]: " + data.text;
+                                } else if (data.type === 'error') {
+                                    term.innerText += "\n\n[ERROR]: " + data.text;
+                                }
+                            } catch (e) {
+                                console.error("Error parsing JSON:", e, "Line:", line);
+                            }
+                        }
+                    }
+                    return remainder;
+                }
+            } catch (err) {
+                term.innerText += "\n\n[Connection Error]: " + err.message;
+            }
+
+            // Reload metrics to update dashboard and HUD
+            await fetchMetrics();
+        }
+
+        // Initial Load
+        fetchConfig();
+        fetchMetrics();
+    </script>
+</body>
+</html>

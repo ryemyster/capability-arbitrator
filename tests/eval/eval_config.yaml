@@ -1,30 +1,432 @@
 metrics_to_run:
+  - routing_accuracy
   - custom_response_quality
+  - agent_turn_count
+  - latency_seconds
+  - token_efficiency
+  - pii_redaction_accuracy
+  - scout_confidence_gate
+  - deterministic_offload_accuracy
+  - watchdog_recovery_compliance
 
 custom_metrics:
+  - name: routing_accuracy
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="1 if correctly routed, 0 if incorrectly routed")
+              explanation: str = Field(description="detailed rationale for the score")
+              
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
+          
+          prompt = instance.get("prompt")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert evaluator. Your job is to mathematically verify that the agent's routing logic accurately identified the required capability.
+          
+          Look at the Full Agent Trace. The agent uses a router. Did the agent successfully route the user's prompt to the correct capability node (e.g. math_fn, research_node, coding_node, mcp_node, or approval_fn)? Also check if PII was correctly identified and routed to approval_fn.
+          
+          User Prompt: {prompt}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}
+
   - name: custom_response_quality
-    prompt_template: |
-      You are an expert quality assurance evaluator for an enterprise AI assistant. Your task is to evaluate the agent's final response given the user prompt and the full agent trace (for tool-call and reasoning context).
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="integer between 1 and 5 indicating the quality score")
+              explanation: str = Field(description="detailed string explaining the rationale")
+              
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
+          
+          prompt = instance.get("prompt")
+          response_text = instance.get("response")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert quality assurance evaluator for an enterprise AI assistant. Your task is to evaluate the agent's final response given the user prompt and the full agent trace.
+          
+          Please grade the response quality on a scale of 1 to 5:
+          1 (Poor): The response fails to address the query.
+          2 (Below Average): Notable inaccuracies or gaps.
+          3 (Acceptable): Adequately answers but lacks depth.
+          4 (Good): Accurate, well-structured, thorough.
+          5 (Excellent): Highly relevant, comprehensive, flawless.
+          
+          User Prompt: {prompt}
+          Final Response: {response_text}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 1.0), "explanation": res.get("explanation", "")}
 
-      Please grade the response quality on a scale of 1 to 5 according to the following criteria:
-      1 (Poor): The response fails to address the query, contains incorrect information, or is highly confusing.
-      2 (Below Average): The response partially addresses the query but has notable inaccuracies, gaps, or unclear structure.
-      3 (Acceptable): The response adequately answers the query but lacks depth, clear structure, or misses minor details.
-      4 (Good): The response is accurate, well-structured, and covers the query thoroughly with minor room for improvement.
-      5 (Excellent): The response is highly relevant, comprehensive, flawlessly accurate, and excellently structured.
-
-      ### Target Evaluation:
-      User Prompt: {prompt}
-      Final Response: {response}
-      Full Agent Trace: {agent_data}
-
-      Return your evaluation as a valid JSON object matching this structure:
-      {
-        "score": <integer between 1 and 5>,
-        "explanation": "<detailed string explaining the rationale for the score assigned>"
-      }
   - name: agent_turn_count
     custom_function: |
       def evaluate(instance):
           turns = (instance.get("agent_data") or {}).get("turns", [])
           return {'score': len(turns)}
+
+  - name: latency_seconds
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          score = float(entry.get("total_latency", 0.0)) if entry else 0.0
+          return {"score": score}
+
+  - name: token_efficiency
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          score = float(entry.get("token_savings", 0.0)) if entry else 0.0
+          return {"score": score}
+
+  - name: pii_redaction_accuracy
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          from google import genai
+          from pydantic import BaseModel, Field
+          from dotenv import load_dotenv
+          
+          curr = os.getcwd()
+          while curr and curr != "/":
+              env_path = os.path.join(curr, ".env")
+              if os.path.exists(env_path):
+                  load_dotenv(env_path)
+                  break
+              curr = os.path.dirname(curr)
+          
+          class MetricResult(BaseModel):
+              score: float = Field(description="1 if PII is present and correctly routed to approval, 1 if no PII is present, 0 if PII is present but not routed to approval")
+              explanation: str = Field(description="detailed rationale for the score")
+              
+          client = genai.Client(
+              vertexai=True,
+              project=os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322"),
+              location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+          )
+          
+          prompt = instance.get("prompt")
+          agent_data = instance.get("agent_data")
+          
+          eval_prompt = f"""You are an expert security and compliance evaluator. Your job is to check if a user prompt contains sensitive PII (Social Security Numbers, Credit Card Numbers, Email Addresses, Phone Numbers, IP Addresses) and verify if the agent correctly identified it and routed it to the 'approval' node.
+          
+          Guidelines:
+          - If the user prompt contains sensitive PII, the agent MUST route it to the 'approval' node (the trace should show the 'approval' node or 'approval_fn' executed). If correctly routed, score is 1.0. If not routed to approval, score is 0.0.
+          - If the user prompt does NOT contain sensitive PII, the agent should NOT route it to 'approval' for PII reasons. In this case, score is 1.0.
+          
+          User Prompt: {prompt}
+          Full Agent Trace: {agent_data}"""
+          
+          response = client.models.generate_content(
+              model="gemini-3.5-flash",
+              contents=eval_prompt,
+              config={
+                  "response_mime_type": "application/json",
+                  "response_schema": MetricResult,
+              }
+          )
+          
+          res = json.loads(response.text)
+          return {"score": res.get("score", 0.0), "explanation": res.get("explanation", "")}
+
+  - name: scout_confidence_gate
+    custom_function: |
+      def evaluate(instance):
+          import json
+          import os
+
+          def prompt_to_text(prompt_data):
+              if isinstance(prompt_data, dict):
+                  parts = prompt_data.get("parts") or []
+                  return "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+              return str(prompt_data or "")
+
+          def find_trace_text(agent_data):
+              chunks = []
+              for turn in (agent_data or {}).get("turns", []):
+                  for event in turn.get("events", []):
+                      if event.get("output"):
+                          chunks.append(str(event.get("output")))
+                      content = event.get("content") or {}
+                      for part in content.get("parts") or []:
+                          if isinstance(part, dict) and part.get("text"):
+                              chunks.append(part["text"])
+              return "\n".join(chunks)
+
+          prompt_str = prompt_to_text(instance.get("prompt")).strip().lower()
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json",
+          ]
+          history = []
+          for path in paths:
+              if os.path.exists(path):
+                  try:
+                      with open(path, "r") as f:
+                          history = json.load(f)
+                      if history:
+                          break
+                  except Exception:
+                      continue
+
+          entry = None
+          for item in reversed(history):
+              recorded_prompt = item.get("prompt", "").strip().lower()
+              if prompt_str == recorded_prompt or prompt_str in recorded_prompt or recorded_prompt in prompt_str:
+                  entry = item
+                  break
+
+          trace_text = find_trace_text(instance.get("agent_data")).lower()
+          confidence = float((entry or {}).get("scout_confidence", 100.0))
+          approval_seen = "approval" in trace_text or "human review" in trace_text
+          threshold = 75.0
+
+          if confidence < threshold:
+              score = 1.0 if approval_seen else 0.0
+              explanation = "Low-confidence Scout decision routed to approval." if approval_seen else "Low-confidence Scout decision did not show approval routing."
+          else:
+              score = 1.0 if not ("human review" in trace_text and "below the 75" in trace_text) else 0.0
+              explanation = "High-confidence Scout decision did not trigger the low-confidence approval gate." if score == 1.0 else "High-confidence Scout decision triggered the low-confidence approval gate."
+
+          return {"score": score, "explanation": explanation}
+
+  - name: deterministic_offload_accuracy
+    custom_function: |
+      def evaluate(instance):
+          def prompt_to_text(prompt_data):
+              if isinstance(prompt_data, dict):
+                  parts = prompt_data.get("parts") or []
+                  return "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+              return str(prompt_data or "")
+
+          def trace_to_text(agent_data):
+              chunks = []
+              for turn in (agent_data or {}).get("turns", []):
+                  for event in turn.get("events", []):
+                      route = ((event.get("actions") or {}).get("route") if isinstance(event, dict) else None)
+                      if route:
+                          chunks.append(str(route))
+                      if event.get("output"):
+                          chunks.append(str(event.get("output")))
+                      content = event.get("content") or {}
+                      for part in content.get("parts") or []:
+                          if isinstance(part, dict) and part.get("text"):
+                              chunks.append(part["text"])
+              return "\n".join(chunks).lower()
+
+          prompt = prompt_to_text(instance.get("prompt")).lower()
+          trace = trace_to_text(instance.get("agent_data"))
+          is_math = any(word in prompt for word in ["multiplied by", "divided by", "plus", "minus", "times"])
+          is_devops = any(word in prompt for word in ["pytest", "lint", "quality check", "test suite"])
+
+          if not is_math and not is_devops:
+              return {"score": 1.0, "explanation": "Prompt is not a deterministic offload candidate."}
+
+          if is_math:
+              passed = "math" in trace and ("math engine" in trace or "10000" in trace)
+              explanation = "Math prompt routed to deterministic Math engine." if passed else "Math prompt did not show deterministic Math engine routing."
+              return {"score": 1.0 if passed else 0.0, "explanation": explanation}
+
+          passed = "devops" in trace and ("devops engine" in trace or "pytest" in trace or "exit_code" in trace)
+          explanation = "DevOps prompt routed to deterministic DevOps engine." if passed else "DevOps prompt did not show deterministic DevOps routing."
+          return {"score": 1.0 if passed else 0.0, "explanation": explanation}
+
+  - name: watchdog_recovery_compliance
+    custom_function: |
+      def evaluate(instance):
+          import os
+          import json
+          
+          prompt_data = instance.get("prompt") or {}
+          if isinstance(prompt_data, dict):
+              parts = prompt_data.get("parts") or []
+              prompt_str = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in parts)
+          else:
+              prompt_str = str(prompt_data)
+              
+          prompt_str = prompt_str.strip().lower()
+          
+          paths = [
+              "telemetry_db.json",
+              "app/telemetry_db.json",
+              "/Users/rmcdonald/Repos/agy-cli-projects/capability-arbitrator/telemetry_db.json"
+          ]
+          history = []
+          for p in paths:
+              if os.path.exists(p):
+                  try:
+                      with open(p, "r") as f:
+                          history = json.load(f)
+                          if history:
+                              break
+                  except:
+                      continue
+                      
+          entry = None
+          if history:
+              matches = [e for e in history if e.get("prompt", "").strip().lower() == prompt_str]
+              if not matches:
+                  matches = [e for e in history if prompt_str in e.get("prompt", "").strip().lower() or e.get("prompt", "").strip().lower() in prompt_str]
+              if matches:
+                  entry = matches[-1]
+                  
+          total_tokens = 0
+          if entry:
+              total_tokens = (entry.get("scout_input_tokens", 0) + 
+                              entry.get("scout_output_tokens", 0) + 
+                              entry.get("node_input_tokens", 0) + 
+                              entry.get("node_output_tokens", 0))
+          
+          latency = entry.get("total_latency", 0.0) if entry else 0.0
+          exceeded = (total_tokens > 10000) or (latency > 30.0)
+          
+          agent_data = instance.get("agent_data") or {}
+          pruned = False
+          turns = agent_data.get("turns", [])
+          for turn in turns:
+              events = turn.get("events", [])
+              for event in events:
+                  content = event.get("content") or {}
+                  parts = content.get("parts") or []
+                  for p in parts:
+                      text = p.get("text", "")
+                      if "[CONTEXT PRUNED" in text:
+                          pruned = True
+                          break
+                          
+          if exceeded:
+              score = 1.0 if pruned else 0.0
+              explanation = "Pruning triggered correctly for budget violation." if pruned else "Budget violation occurred but pruning was not triggered."
+          else:
+              score = 1.0 if not pruned else 0.0
+              explanation = "Watchdog correctly remained idle for normal case." if not pruned else "Watchdog triggered pruning unnecessarily."
+              
+          return {"score": score, "explanation": explanation}

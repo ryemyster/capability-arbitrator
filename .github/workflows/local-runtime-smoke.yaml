@@ -1,0 +1,67 @@
+# Copyright 2026 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Local Runtime Smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dashboard-and-cli-smoke:
+    name: Dashboard and CLI smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.0.0
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Start dashboard, verify routes, and run CLI commands
+        env:
+          INTEGRATION_TEST: "TRUE"
+          PORT: "8000"
+          STRIDE_SELF_HEALING_ENABLED: "false"
+          QUALITY_FLYWHEEL_ENABLED: "false"
+        run: |
+          uv run python app/dashboard.py &
+          DASHBOARD_PID=$!
+          trap 'kill "$DASHBOARD_PID" 2>/dev/null || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl -fsS http://127.0.0.1:8000/ >/dev/null
+          curl -fsS http://127.0.0.1:8000/api/metrics >/dev/null
+
+          uv run arbitrator run "My SSN is 123-45-6789"
+          uv run arbitrator stride-heal app/agent.py --mode audit_only --dry-run
+          uv run arbitrator flywheel --dry-run

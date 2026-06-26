@@ -1,0 +1,13 @@
+# KPI thresholds and flywheel tuning knobs for the Capability Arbitrator.
+# Both the Product Agent (runtime) and the Quality Flywheel (offline) read from this file.
+# Changing a value here immediately affects both the live KPI gate and flywheel trigger sensitivity.
+
+product_agent:
+  routing_confidence_threshold: 75.0   # pct — Outcome 2: High-Fidelity Routing
+  latency_threshold_seconds: 30.0      # sec — Outcome 1: Eradicate Context Rot
+  token_savings_threshold: 0.80        # ratio — Outcome 1: CpE >80% reduction vs monolithic
+
+flywheel:
+  window: 20           # rows to look back in telemetry_db.json
+  threshold: 3         # violations in window before triggering optimization
+  min_routing_accuracy: 0.60   # minimum routing accuracy from deep-testing validation gate

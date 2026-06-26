@@ -6,24 +6,26 @@ authors = [
     {name = "Your Name", email = "your@email.com"},
 ]
 
-
-
 dependencies = [
     "google-adk[gcp]>=2.0.0,<3.0.0",
     "opentelemetry-instrumentation-google-genai>=0.1.0,<1.0.0",
     "gcsfs>=2024.11.0",
     "google-cloud-logging>=3.12.0,<4.0.0",
-    "google-cloud-aiplatform[evaluation,agent-engines]>=1.156.0",
+    "google-cloud-aiplatform[agent-engines]>=1.156.0",
     "protobuf>=6.31.1,<7.0.0",
+    "mcp>=1.28.0",
 ]
 requires-python = ">=3.11,<3.14"
 
+[project.scripts]
+arbitrator = "app.cli:main"
 
 [dependency-groups]
 dev = [
     "pytest>=9.0.2,<10.0.0",
     "pytest-asyncio>=1.0.0,<2.0.0",
     "nest-asyncio>=1.6.0,<2.0.0",
+    "pytest-bdd>=8.1.0",
 ]
 
 [project.optional-dependencies]
@@ -80,7 +82,7 @@ deprecated = "ignore"
 
 [tool.codespell]
 ignore-words-list = "rouge"
-skip = "./locust_env/*,uv.lock,.venv,./frontend,**/package-lock.json"
+skip = "./locust_env/*,uv.lock,.venv,./frontend,**/package-lock.json,adk_debug.yaml"
 
 
 
@@ -93,8 +95,8 @@ build-backend = "hatchling.build"
 [tool.pytest.ini_options]
 pythonpath = "."
 asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests/unit", "tests/integration"]
+norecursedirs = ["tests/load_test", "tests/scripts", "tests/manual_test_scripts"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app","frontend"]
-
-

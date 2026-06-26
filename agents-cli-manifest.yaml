@@ -1,7 +1,7 @@
 name: "capability-arbitrator"
-acli_version: "0.5.0"
+acli_version: "0.5.1"
 agent_directory: "app"
-region: "us-east1"
+region: "global"
 base_template: "adk"
 generated_at: "2026-06-23T16:42:22.008542+00:00"
 language: "python"
@@ -12,4 +12,4 @@ create_params:
   include_data_ingestion: false
   
   datastore: "none"
-  agent_guidance_filename: "GEMINI.md"
+  agent_guidance_filename: ".agents/CONTEXT.md"
