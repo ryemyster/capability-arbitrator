@@ -55,6 +55,11 @@ ENV_VARS_TO_DEPLOY = [
 
 # --- Cloud Run ---
 CR_SERVICE_NAME = "capability-arbitrator"
+# Memory/CPU for the Cloud Run service. The default 512Mi is too small for the
+# FastAPI + ADK + vertexai + google-cloud client stack (it OOMs at startup with
+# "Memory limit of 512 MiB exceeded"). 2Gi gives headroom for imports + requests.
+CR_MEMORY = "2Gi"
+CR_CPU = "1"
 # GOOGLE_API_KEY is excluded — injected at runtime via Secret Manager
 # CLOUD_RUN_SERVICE_ACCOUNT is excluded — it's deploy config, not an app env var
 CR_ENV_VARS_TO_DEPLOY = [
@@ -349,6 +354,8 @@ def cmd_cr_deploy() -> None:
         f"--region={location}",
         "--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest",
         "--port=8080",
+        f"--memory={CR_MEMORY}",
+        f"--cpu={CR_CPU}",
         "--allow-unauthenticated",
     ]
     if sa:

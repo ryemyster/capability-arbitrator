@@ -190,6 +190,9 @@ Cloud Run deployments use `gcloud run deploy --source .` — Google Cloud Buildp
 > Without it, the Python buildpack falls back to its default entrypoint (`main:app`), fails to find `app.fast_api_app:app`, and the service either fails to build or boots the wrong module — `/dashboard` would not serve. The only equivalent without a Procfile is passing `--set-build-env-vars=GOOGLE_ENTRYPOINT="uvicorn app.fast_api_app:app --host 0.0.0.0 --port $PORT"` on every deploy, which is more fragile. Keep the Procfile.
 
 > [!IMPORTANT]
+> **Memory:** The service is deployed with `--memory=2Gi` (set via `CR_MEMORY` in [`scripts/deploy_agent.py`](../scripts/deploy_agent.py)). Cloud Run's default of 512 MiB is **not enough** — the FastAPI + ADK + `vertexai` + `google-cloud` import stack OOMs at startup with `Memory limit of 512 MiB exceeded with 512 MiB used`, and the revision silently fails to serve. Do not lower this below ~1Gi.
+
+> [!IMPORTANT]
 > **Python version pin:** [`.python-version`](../.python-version) pins the build to Python `3.13`. Without it, Buildpacks default to the newest available interpreter (3.14+), which `uv sync` rejects because `pyproject.toml` requires `>=3.11,<3.14`. The `us-west1` builder only stocks the `3.13.x` and `3.14.x` series, so `3.13` is the only in-range option — do not change this to `3.12` even though that matches some local environments.
 
 ---
