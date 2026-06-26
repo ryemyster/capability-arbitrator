@@ -144,3 +144,10 @@ uv run uvicorn app.fast_api_app:app --host 127.0.0.1 --port 8000
 | `http://127.0.0.1:8000/dashboard` | Custom telemetry dashboard |
 | `http://127.0.0.1:8000/api/run` | Streaming dashboard execution endpoint |
 | `http://127.0.0.1:8000/api/metrics` | Local telemetry history |
+
+### 5. View The Dashboard In The Cloud
+The unified FastAPI service (including `/dashboard`) can be deployed to Cloud Run. Once deployed, the dashboard lives at `/dashboard` on the service URL printed by the deploy command:
+```text
+https://<service-url>/dashboard
+```
+Retrieve the URL anytime with `uv run python scripts/deploy_agent.py status --target cloud_run`. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#finding-the-deployed-dashboard-url) for the full Cloud Run workflow.
