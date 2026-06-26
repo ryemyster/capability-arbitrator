@@ -19,6 +19,7 @@ Why it exists: To support local dashboard/API development and optional web-servi
 How it works: Obtains the standard ADK FastAPI app, mounts custom dashboard/telemetry routes, and serves them.
 """
 import json
+import logging
 import os
 from typing import Any, AsyncGenerator
 
@@ -30,6 +31,13 @@ from google.cloud import logging as google_cloud_logging
 
 from app.app_utils.telemetry import setup_telemetry
 from app.app_utils.typing import Feedback, PubSubEnvelope
+
+# Configure the root logger so application logs (including the experimental
+# ambient supervisor's INFO signals) reach stdout/stderr and are captured by
+# Cloud Run. Python's default root level is WARNING, which would otherwise
+# suppress the [AmbientFlywheel]/[AmbientSTRIDE] lines. uvicorn keeps its own
+# loggers (propagate=False), so this does not double-log access logs.
+logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO").upper())
 
 setup_telemetry()
 try:

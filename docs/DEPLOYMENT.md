@@ -197,6 +197,89 @@ Cloud Run deployments use `gcloud run deploy --source .` — Google Cloud Buildp
 
 ---
 
+## Post-Deployment Smoke Tests
+
+After a Cloud Run deploy, verify the service from the CLI. Set the URL once:
+
+```bash
+URL=$(uv run python scripts/deploy_agent.py status --target cloud_run 2>/dev/null \
+  | grep -oE 'https://[^ ]+run\.app' | head -1)
+# or hard-code it: URL="https://capability-arbitrator-<project-number>.us-west1.run.app"
+```
+
+### 1. Core HTTP surface
+
+```bash
+# Dashboard + metrics should both return 200
+curl -s -o /dev/null -w "dashboard: %{http_code}\n" "$URL/dashboard"
+curl -s -o /dev/null -w "metrics:   %{http_code}\n" "$URL/api/metrics"
+
+# Deterministic agent run (0 LLM tokens) — expect "Math Engine result: 893"
+curl -sN -X POST "$URL/api/run" -H "Content-Type: application/json" \
+  -d '{"prompt": "what is 47 * 19?"}'
+```
+
+`/api/run` streams Server-Sent Events (`data: {...}` lines). Math and devops prompts route to the deterministic engines, so they cost no tokens and make ideal free smoke checks.
+
+### 2. Experimental surfaces (STRIDE Self-Healing + Quality Flywheel)
+
+These features have two surfaces. Only the **ambient** surface runs on Cloud Run.
+
+| Surface | Where it runs | Cloud Run behavior |
+| :--- | :--- | :--- |
+| **CLI** (`arbitrator stride-heal`, `arbitrator flywheel`) | Local only | Not exposed — it patches repo files / opens PRs via `gh`, neither of which exists in the container. Test these locally (see below). |
+| **Ambient observer** | After every agent run (`/api/run`, `/pubsub`) | Runs automatically when enabled. **Log-only** — it never patches files or opens PRs in any environment. |
+
+The ambient observers fire from `save_run()` → `on_run_saved()` after each `/api/run` (verified path: `/api/run` runs locally, and `_stream_local_query` calls `save_run()` in its `finally`). They are deliberately quiet, so read the expectations below carefully — **silence is the healthy result, not a failure.**
+
+```bash
+# Generate a few runs so the Flywheel observer has telemetry to scan
+for i in 1 2 3; do
+  curl -sN -X POST "$URL/api/run" -H "Content-Type: application/json" \
+    -d '{"prompt": "what is 6 * 7?"}' >/dev/null
+done
+
+# Read the logs and look for ambient signals / errors
+gcloud run services logs read capability-arbitrator \
+  --project=YOUR_PROJECT_ID --region=YOUR_REGION --limit=150 \
+  | grep -E "AmbientFlywheel|AmbientSTRIDE"
+```
+
+What to expect at the default `INFO` level:
+
+- **Quality Flywheel** — the observer runs on every agent run, but only logs at `INFO` **when** routing-accuracy violations cross the threshold: `[AmbientFlywheel] Violations detected for: [...]`. On a clean system it logs `"No violations above threshold."` at `DEBUG`, which is suppressed at `INFO` — so **no line is the normal, healthy outcome.** An observer crash would log at `WARNING` (`[AmbientFlywheel] Observer error: ...`); the absence of any such `WARNING` after traffic confirms it ran cleanly.
+- **STRIDE Self-Healing** — the ambient observer only acts when the run's `scout_tag` is `coding`/`stride` **and** the run carries an on-disk `target_file`. Normal HTTP prompts (math/devops/general) carry neither, so on Cloud Run STRIDE ambient never engages — by design. STRIDE is exercised through its local CLI, not the cloud service.
+
+To **positively confirm** the Flywheel observer executes (rather than infer it from silence), raise the log level to `DEBUG` for one run, then revert:
+
+```bash
+gcloud run services update capability-arbitrator \
+  --project=YOUR_PROJECT_ID --region=YOUR_REGION --update-env-vars=LOG_LEVEL=DEBUG
+# fire a run, then:
+gcloud run services logs read capability-arbitrator \
+  --project=YOUR_PROJECT_ID --region=YOUR_REGION --limit=200 | grep AmbientFlywheel
+# expect: [AmbientFlywheel] No violations above threshold.
+gcloud run services update capability-arbitrator \
+  --project=YOUR_PROJECT_ID --region=YOUR_REGION --update-env-vars=LOG_LEVEL=INFO
+```
+
+> [!NOTE]
+> The ambient features are gated by env vars deployed from `.env`: `STRIDE_SELF_HEALING_ENABLED` / `STRIDE_SELF_HEALING_AMBIENT_ENABLED` and `QUALITY_FLYWHEEL_ENABLED` / `QUALITY_FLYWHEEL_AMBIENT_ENABLED`. If they were `false` at deploy time, the observers no-op regardless of traffic. Confirm the deployed values with `status --target cloud_run`. Both observers are **log-only in every environment** — they never patch files or open PRs.
+
+### 3. Local-only experimental CLI (not part of the cloud smoke test)
+
+The patch/PR-capable surfaces run against your local checkout:
+
+```bash
+# STRIDE: audit a Python file (audit_only mode writes nothing)
+uv run arbitrator stride-heal app/cli.py --mode audit_only
+
+# Flywheel: detect routing violations in local telemetry (dry run, no PR)
+uv run arbitrator flywheel --dry-run
+```
+
+---
+
 ## Required GCP APIs
 
 The following APIs must be enabled in your GCP project before deployment. Missing any of these will cause silent failures or empty agent responses.
