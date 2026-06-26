@@ -159,6 +159,13 @@ def get_metrics() -> list[dict[str, Any]]:
     from app.app_utils.telemetry import get_history
     return get_history()
 
+
+@app.get("/api/config")
+def get_config() -> dict[str, str]:
+    """Expose runtime config the dashboard needs (e.g. the active model name)."""
+    from app.config import MODEL
+    return {"model": MODEL}
+
 def get_trace_event(event: Any) -> list[str]:
     """Inspects an ADK event and returns list of trace logs describing execution.
 

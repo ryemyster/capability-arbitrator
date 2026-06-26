@@ -167,6 +167,69 @@
             letter-spacing: 0.08em;
         }
 
+        .stat-label-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+        }
+
+        .stat-sublabel {
+            font-size: 0.625rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+            margin-top: 0.4rem;
+            font-family: "SF Mono", "Monaco", "Menlo", ui-monospace, monospace;
+            letter-spacing: 0.02em;
+        }
+
+        .info-tip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid var(--text-muted);
+            color: var(--text-muted);
+            font-size: 0.6rem;
+            font-style: italic;
+            font-weight: 700;
+            cursor: help;
+            position: relative;
+            text-transform: none;
+            flex-shrink: 0;
+        }
+
+        .info-tip:hover {
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .info-tip:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            bottom: 150%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 250px;
+            background: #0b0b12;
+            border: 1px solid var(--panel-border);
+            color: var(--text-secondary, #c8c8d0);
+            padding: 0.65rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.7rem;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 1.45;
+            text-transform: none;
+            letter-spacing: normal;
+            text-align: left;
+            z-index: 50;
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+            pointer-events: none;
+        }
+
         /* Playground form */
         .playground-form {
             display: flex;
@@ -421,7 +484,11 @@
                 <div class="stats-row">
                     <div class="stat-box">
                         <div class="stat-value savings" id="val-total-savings">0.00%</div>
-                        <div class="stat-label">Token Savings Rate</div>
+                        <div class="stat-label-row">
+                            <span class="stat-label">Token Savings Rate</span>
+                            <span class="info-tip" data-tip="Share of LLM tokens avoided vs. a 'monolithic' baseline — sending the whole task to one large prompt with every tool and instruction loaded. The arbitrator instead classifies intent, loads only the matching branch, and routes math/devops to deterministic code (0 tokens). Higher = cheaper.">i</span>
+                        </div>
+                        <div class="stat-sublabel" id="val-total-savings-detail">vs. one all-in-one prompt</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-value savings" id="val-cost-savings">$0.00</div>
@@ -574,7 +641,7 @@
                 </div>
                 <div class="hud-row">
                     <span>Scout Model:</span>
-                    <span class="hud-value" id="hud-scout-model">gemini-3.1-flash-lite</span>
+                    <span class="hud-value" id="hud-scout-model">…</span>
                 </div>
                 <div class="hud-row">
                     <span>Scout Latency (TTFT):</span>
@@ -652,6 +719,18 @@
                 updateDashboard(history);
             } catch (err) {
                 console.error("Error fetching metrics:", err);
+            }
+        }
+
+        async function fetchConfig() {
+            try {
+                const res = await fetch('/api/config');
+                const cfg = await res.json();
+                if (cfg.model) {
+                    document.getElementById('hud-scout-model').innerText = cfg.model;
+                }
+            } catch (err) {
+                console.error("Error fetching config:", err);
             }
         }
 
@@ -757,6 +836,10 @@
             const offloadRate = reversed.length > 0 ? (devopsCount / reversed.length) * 100 : 0;
 
             document.getElementById('val-total-savings').innerText = savingsRate.toFixed(2) + '%';
+            const fmtTok = (n) => n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(Math.round(n));
+            document.getElementById('val-total-savings-detail').innerText = totalMonoTokens > 0
+                ? `${fmtTok(totalMonoTokens)} baseline → ${fmtTok(totalArbTokens)} actual`
+                : 'vs. one all-in-one prompt';
             document.getElementById('val-cost-savings').innerText = '$' + totalCostSaved.toFixed(5);
             document.getElementById('val-avg-scout-ttft').innerText = (totalScoutTTFT / reversed.length).toFixed(2) + 's';
             document.getElementById('val-offload-rate').innerText = offloadRate.toFixed(2) + '%';
@@ -894,6 +977,7 @@
         }
 
         // Initial Load
+        fetchConfig();
         fetchMetrics();
     </script>
 </body>
