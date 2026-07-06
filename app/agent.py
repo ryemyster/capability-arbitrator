@@ -51,8 +51,11 @@ from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.scout_utils import build_scout_node
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.telemetry import (
+    checkpoint_telemetry,
     init_telemetry,
+    record_mcp_tool_call,
     record_security_screen,
+    restore_telemetry,
 )
 
 load_dotenv()
@@ -112,6 +115,16 @@ if not mcp_tools:
     )
     mcp_tools.append(filesystem_mcp)
 
+def _record_mcp_tool_usage(tool: Any, args: dict, tool_context: Context, tool_response: dict) -> None:
+    """After-tool callback: counts MCP tool calls for dashboard telemetry.
+    ToolContext is the same Context type used by FunctionNodes, so the durable
+    restore/checkpoint pair applies unchanged here (see scout_utils.py).
+    """
+    restore_telemetry(tool_context)
+    record_mcp_tool_call()
+    checkpoint_telemetry(tool_context, "workflow_node_checkpoint")
+
+
 coding_node = LlmAgent(
     name="coding_node",
     model=global_model,
@@ -120,6 +133,7 @@ IMPORTANT: You must NEVER call 'directory_tree' on the root directory '.' or any
 QUALITY RULE: Whenever you modify Python files in 'app/', you must run the quality verification checks using `uv run python scripts/agent_quality_check.py` and auto-correct any violations before completing your task.
 """,
     tools=mcp_tools,
+    after_tool_callback=_record_mcp_tool_usage,
 )
 
 mcp_node = LlmAgent(
@@ -129,6 +143,7 @@ mcp_node = LlmAgent(
 IMPORTANT: You must NEVER call 'directory_tree' on the root directory '.' or any directory containing '.venv', '.git', etc. If you want to explore files, use 'list_directory' or 'search_files' instead. NEVER list, read, search, or access any files inside '.venv', '.git', '.pytest_cache', '__pycache__', or '.google-agents-cli' directories. Always ignore these directories in your search.
 """,
     tools=mcp_tools,
+    after_tool_callback=_record_mcp_tool_usage,
 )
 
 # 3. Dynamic Node Mapping and Edge Wiring
