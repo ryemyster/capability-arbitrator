@@ -73,6 +73,7 @@ class AgentEngineApp(AdkApp):
         user_id: str,
         session_id: str | None,
         run_source: str,
+        invocation_id: str | None = None,
     ) -> None:
         """Persist query metadata after the graph has recorded telemetry."""
         from app.app_utils.telemetry import save_run, update_telemetry
@@ -81,6 +82,7 @@ class AgentEngineApp(AdkApp):
             "user_id": user_id,
             "session_id": session_id or "agent-runtime-session",
             "run_source": run_source,
+            "invocation_id": invocation_id or "unknown",
         })
         save_run()
 
@@ -102,6 +104,7 @@ class AgentEngineApp(AdkApp):
             session_id=session_id,
         )
         msg_str = message if isinstance(message, str) else str(message)
+        invocation_id = None
         try:
             async for event in runner.run_async(
                 user_id=user_id,
@@ -110,9 +113,11 @@ class AgentEngineApp(AdkApp):
                     role="user", parts=[types.Part.from_text(text=msg_str)]
                 ),
             ):
+                if hasattr(event, "invocation_id") and event.invocation_id:
+                    invocation_id = event.invocation_id
                 yield event
         finally:
-            self._save_query_metadata(user_id, session.id, run_source)
+            self._save_query_metadata(user_id, session.id, run_source, invocation_id)
 
     async def _stream_remote_query(
         self,
@@ -122,11 +127,14 @@ class AgentEngineApp(AdkApp):
         run_source: str,
     ) -> AsyncGenerator[Any, None]:
         """Run the deployed Agent Runtime path and save telemetry."""
+        invocation_id = None
         try:
             async for event in super().async_stream_query(**query_args):
+                if hasattr(event, "invocation_id") and event.invocation_id:
+                    invocation_id = event.invocation_id
                 yield event
         finally:
-            self._save_query_metadata(user_id, session_id, run_source)
+            self._save_query_metadata(user_id, session_id, run_source, invocation_id)
 
     async def async_stream_query(
         self,
