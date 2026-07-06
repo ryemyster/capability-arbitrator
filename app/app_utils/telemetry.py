@@ -43,6 +43,7 @@ def init_telemetry(prompt: str) -> dict[str, Any]:
         "prompt": prompt,
         "user_id": "unknown",
         "session_id": "unknown",
+        "invocation_id": "unknown",
         "run_source": "unknown",
         "pii_detected": False,
         "pii_types": [],
@@ -243,10 +244,17 @@ def save_run() -> dict[str, Any] | None:
     run = calculate_savings(run)
 
     history = get_history()
-    # De-duplicate: update in-place if a run with the same session_id already exists
+    # De-duplicate: update in-place if a run with the same invocation_id (or fallback to session_id) already exists
+    invocation_id = run.get("invocation_id")
     session_id = run.get("session_id")
     replaced = False
-    if session_id and session_id != "unknown":
+    if invocation_id and invocation_id != "unknown":
+        for i, h in enumerate(history):
+            if h.get("invocation_id") == invocation_id:
+                history[i] = run
+                replaced = True
+                break
+    elif not replaced and session_id and session_id != "unknown":
         for i, h in enumerate(history):
             if h.get("session_id") == session_id:
                 history[i] = run

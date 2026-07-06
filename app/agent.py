@@ -274,6 +274,7 @@ class TelemetryPlugin(BasePlugin):
             "user_id": user_id,
             "session_id": session_id,
             "run_source": run_source,
+            "invocation_id": invocation_context.invocation_id,
         })
         save_run()
 
