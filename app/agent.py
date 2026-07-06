@@ -156,7 +156,10 @@ def security_screen(node_input: str) -> Event:
     """Security screen scanner to check inputs for PII leaks."""
     input_str = str(node_input)
     run = init_telemetry(input_str)
-    run_state = {"telemetry_run_id": run["telemetry_run_id"]}
+    # Durable snapshot: the ContextVar can be lost across task/runner boundaries
+    # (e.g. adk web's playground server), so ctx.state must carry the full run
+    # dict, not just its id, or a fresh run has nothing to recover from.
+    run_state = {"telemetry_run_id": run["telemetry_run_id"], "telemetry_snapshot": dict(run)}
     pii_patterns = {
         "Social Security Number": r"\b\d{3}-\d{2,3}-\d{4}\b",
         "Email Address": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",

@@ -28,7 +28,6 @@ from google.genai import types
 
 from app.app_utils import telemetry
 from app.app_utils.watchdog_utils import (
-    CHEAPER_MODEL,
     global_model,
     telemetry_watchdog_fn,
 )
@@ -78,7 +77,7 @@ async def test_watchdog_remains_idle_below_budget(
 
 
 @pytest.mark.asyncio
-async def test_watchdog_prunes_and_switches_model_above_token_budget(
+async def test_watchdog_prunes_without_mutating_shared_model(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Verifies token overruns trigger context pruning and cheaper model fallback."""
@@ -103,7 +102,7 @@ async def test_watchdog_prunes_and_switches_model_above_token_budget(
     result = await telemetry_watchdog_fn(ctx, "oversized output")
 
     assert result.output == "oversized output"
-    assert global_model.model == CHEAPER_MODEL
+    assert global_model.model == "gemini-test-start"
     assert len(ctx.session.events) == 1
     pruned_text = ctx.session.events[0].content.parts[0].text
     assert "[CONTEXT PRUNED" in pruned_text
@@ -111,7 +110,7 @@ async def test_watchdog_prunes_and_switches_model_above_token_budget(
 
 
 @pytest.mark.asyncio
-async def test_watchdog_switches_model_above_latency_budget(
+async def test_watchdog_preserves_model_above_latency_budget(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Verifies slow runs trigger the cheaper model fallback even with low tokens."""
@@ -122,7 +121,7 @@ async def test_watchdog_switches_model_above_latency_budget(
     ctx = _context([_event("slow prompt", 100)])
     await telemetry_watchdog_fn(ctx, "slow output")
 
-    assert global_model.model == CHEAPER_MODEL
+    assert global_model.model == "gemini-test-start"
     assert len(ctx.session.events) == 1
 
 
