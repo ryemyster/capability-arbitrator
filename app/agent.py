@@ -18,7 +18,6 @@ Purpose: Defines the dynamic capability arbitrator agent workflow.
 Why/How: A progressive disclosure traffic router that assigns tasks to nodes based on target workspace configurations.
 """
 import re
-from collections.abc import AsyncGenerator
 from typing import Any
 
 from dotenv import load_dotenv
@@ -26,7 +25,6 @@ from google.adk.agents import LlmAgent
 from google.adk.agents.context import Context
 from google.adk.apps import App
 from google.adk.events.event import Event
-from google.adk.events.request_input import RequestInput
 from google.adk.plugins.debug_logging_plugin import DebugLoggingPlugin
 from google.adk.plugins.logging_plugin import LoggingPlugin
 from google.adk.tools.mcp_tool import McpToolset
@@ -36,6 +34,10 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from app.app_utils.compliance_judge_utils import compliance_judge
+from app.app_utils.approval_utils import (
+    approval_fn,
+    build_approval_state,
+)
 from app.app_utils.config_loader import (
     get_target_dir,
     load_arbitrator_config,
@@ -48,7 +50,10 @@ from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.scout_utils import build_scout_node
 from app.app_utils.skill_utils import load_skill_instructions
-from app.app_utils.telemetry import init_telemetry, record_hitl, record_security_screen
+from app.app_utils.telemetry import (
+    init_telemetry,
+    record_security_screen,
+)
 
 load_dotenv()
 
@@ -58,7 +63,6 @@ from app.app_utils.watchdog_utils import global_model, telemetry_watchdog
 target_dir = get_target_dir()
 caps = load_arbitrator_config(target_dir)
 mcp_settings = load_mcp_configs(target_dir)
-
 llm_scout = build_scout_node(caps)
 
 def router_node(ctx: Context, node_input: Any) -> Event:
@@ -73,32 +77,12 @@ def router_node(ctx: Context, node_input: Any) -> Event:
     else:
         tag = str(node_input)
         prompt = get_prompt_text(ctx) or str(node_input)
+    if tag == "approval":
+        state = build_approval_state("router_approval", "halt", prompt)
+        return Event(output=prompt, route=tag, state=state)  # type: ignore
     return Event(output=prompt, route=tag)  # type: ignore
 
 router_fn = FunctionNode(name="router", func=router_node)
-
-async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event | RequestInput, None]:
-    """Approval node with human-in-the-loop validation."""
-    import sys
-    alert_msg = str(node_input) or "High-risk routing."
-    if any("_inference_runner.py" in arg for arg in sys.argv):
-        msg = f"Approval auto-granted in eval mode. Details: {alert_msg}"
-        yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-        yield Event(output=msg)
-        return
-    if getattr(ctx, "resume_inputs", None) is None or "approval_req" not in ctx.resume_inputs:
-        record_hitl(escalated=True, approved=False, latency=0.0)
-        yield RequestInput(interrupt_id="approval_req", message=f"🚨 PAUSING WORKFLOW 🚨\n{alert_msg}\n\nApprove routing? (y/n)")
-        return
-    approved = ctx.resume_inputs.get("approval_req", "")
-    is_approved = approved.lower() in ["y", "yes", "approve", "true"]
-    record_hitl(escalated=True, approved=is_approved, latency=5.0)
-    msg = "Approval granted. Continuing..." if is_approved else "Approval denied. Halting workflow."
-    yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-    yield Event(output=msg)
-
-approval_fn = FunctionNode(name="approval", func=approval_node)
-
 # 2. Dynamically set up MCP tools based on configs
 mcp_tools = []
 if mcp_settings:
@@ -171,7 +155,7 @@ for cap in caps:
 def security_screen(node_input: str) -> Event:
     """Security screen scanner to check inputs for PII leaks."""
     input_str = str(node_input)
-    init_telemetry(input_str)
+    run = init_telemetry(input_str)
     pii_patterns = {
         "Social Security Number": r"\b\d{3}-\d{2,3}-\d{4}\b",
         "Email Address": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
@@ -183,9 +167,18 @@ def security_screen(node_input: str) -> Event:
     if detected:
         pii_list = ", ".join(detected)
         record_security_screen(pii_detected=True, pii_types=detected)
-        return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval")  # type: ignore
+        # Durable snapshot: the ContextVar can be lost across task/runner boundaries
+        # (e.g. adk web's playground server), so ctx.state must carry the full run
+        # dict, not just its id, or a fresh run has nothing to recover from. Taken
+        # after record_security_screen so the snapshot reflects the PII detection.
+        run_state = {"telemetry_run_id": run["telemetry_run_id"], "telemetry_snapshot": dict(run)}
+        run_state.update(
+            build_approval_state("pii_screen", "scout", input_str)
+        )
+        return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval", state=run_state)  # type: ignore
     record_security_screen(pii_detected=False, pii_types=[])
-    return Event(output=node_input, route="safe")  # type: ignore
+    run_state = {"telemetry_run_id": run["telemetry_run_id"], "telemetry_snapshot": dict(run)}
+    return Event(output=node_input, route="safe", state=run_state)  # type: ignore
 
 
 edges = [
@@ -214,12 +207,15 @@ for cap in caps:
 
     if target_node:
         edges.append(Edge(from_node=router_fn, to_node=target_node, route=cap.tag))
-        if target_node not in terminal_nodes:
+        if target_node not in terminal_nodes and target_node != approval_fn:
             terminal_nodes.append(target_node)
 
 edges.append(Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE))
-if approval_fn not in terminal_nodes:
-    terminal_nodes.append(approval_fn)
+
+# Add routing edges from approval to continue or halt
+edges.append(Edge(from_node=approval_fn, to_node=llm_scout, route="scout"))
+edges.append(Edge(from_node=approval_fn, to_node=router_fn, route="execute"))
+edges.append(Edge(from_node=approval_fn, to_node=compliance_judge, route="halt"))
 
 # Wire all terminal nodes through the Compliance Judge before the Telemetry Watchdog
 for t_node in terminal_nodes:
@@ -228,6 +224,35 @@ for t_node in terminal_nodes:
 edges.append(Edge(from_node=compliance_judge, to_node=product_agent, route="safe"))
 edges.append(Edge(from_node=product_agent, to_node=telemetry_watchdog))
 edges.append(Edge(from_node=compliance_judge, to_node=router_fn, route="retry"))
+
+from google.adk.plugins import BasePlugin
+from google.adk.agents.invocation_context import InvocationContext
+from app.app_utils.telemetry import save_run, update_telemetry, classify_run_source
+
+class TelemetryPlugin(BasePlugin):
+    async def after_run_callback(self, *, invocation_context: InvocationContext) -> None:
+        user_id = invocation_context.user_id
+        session_id = invocation_context.session.id
+        
+        run_config = getattr(invocation_context, "run_config", None)
+        force_local = False
+        if run_config is not None:
+            if isinstance(run_config, dict):
+                force_local = bool(run_config.get("force_local"))
+            else:
+                metadata = getattr(run_config, "custom_metadata", None) or {}
+                if isinstance(metadata, dict):
+                    force_local = bool(metadata.get("force_local"))
+
+        run_source = classify_run_source(user_id, session_id, force_local)
+
+        update_telemetry({
+            "user_id": user_id,
+            "session_id": session_id,
+            "run_source": run_source,
+            "invocation_id": invocation_context.invocation_id,
+        })
+        save_run()
 
 root_workflow = Workflow(
     name="root_agent",
@@ -240,5 +265,6 @@ app = App(
     plugins=[
         LoggingPlugin(),
         DebugLoggingPlugin(output_path="/tmp/adk_debug.yaml"),
+        TelemetryPlugin("telemetry"),
     ],
 )

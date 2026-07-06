@@ -19,6 +19,8 @@ Why it exists: Ambiguous Scout decisions should pause for human review instead o
 How it works: It sends fake Scout outputs into the supervisor and checks the chosen route.
 """
 
+from types import SimpleNamespace
+
 from app.app_utils.scout_supervisor_utils import (
     CONFIDENCE_THRESHOLD,
     scout_supervisor_node,
@@ -28,7 +30,7 @@ from app.app_utils.scout_supervisor_utils import (
 def test_scout_supervisor_allows_high_confidence_route() -> None:
     """Verifies confident Scout decisions continue to the normal router."""
     event = scout_supervisor_node(
-        ctx=None,  # type: ignore[arg-type]
+        ctx=SimpleNamespace(user_content=None),
         node_input={"capability_tag": "research", "confidence_score": 92.5},
     )
 
@@ -39,7 +41,7 @@ def test_scout_supervisor_allows_high_confidence_route() -> None:
 def test_scout_supervisor_escalates_low_confidence_route() -> None:
     """Verifies uncertain Scout decisions route to human approval."""
     event = scout_supervisor_node(
-        ctx=None,  # type: ignore[arg-type]
+        ctx=SimpleNamespace(user_content=None),
         node_input={"capability_tag": "coding", "confidence_score": 60.0},
     )
 
@@ -47,12 +49,15 @@ def test_scout_supervisor_escalates_low_confidence_route() -> None:
     assert "human review" in event.output
     assert "coding" in event.output
     assert str(int(CONFIDENCE_THRESHOLD)) in event.output
+    assert event.actions.state_delta["approval_capability_tag"] == "coding"
+    assert event.actions.state_delta["approval_next_route"] == "execute"
+    assert event.actions.state_delta["approval_interrupt_id"].startswith("approval_req_")
 
 
 def test_scout_supervisor_clamps_invalid_confidence_to_approval() -> None:
     """Verifies missing or invalid confidence scores fail closed to approval."""
     event = scout_supervisor_node(
-        ctx=None,  # type: ignore[arg-type]
+        ctx=SimpleNamespace(user_content=None),
         node_input={"capability_tag": "mcp", "confidence_score": "not-a-number"},
     )
 

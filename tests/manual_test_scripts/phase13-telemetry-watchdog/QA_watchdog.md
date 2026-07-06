@@ -10,10 +10,10 @@ This script guides the manual validation of the Telemetry Watchdog node, which e
    ```
    Ensure both sub-tests return `[PASS]`:
    - `Sub-test 1 (Below Threshold Pass-through) [PASS]`
-   - `Sub-test 2 (Above Threshold Pruning and Switching) [PASS]`
+   - `Sub-test 2 (Above Threshold Pruning Without Model Leakage) [PASS]`
 
 2. Confirm that when thresholds are violated (e.g., token count exceeding 10,000):
-   - The downstream model configuration successfully switches to `gemini-2.0-flash-lite`.
+   - The configured shared model remains unchanged for later sessions.
    - The conversation events are pruned and replaced with a single consolidated summary event.
 
 *Created: 2026-06-24T18:35:00-06:00*

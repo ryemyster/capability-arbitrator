@@ -36,8 +36,6 @@ from app.config import MODEL
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
 LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
-CHEAPER_MODEL = "gemini-2.0-flash-lite"
-
 class GlobalGemini(Gemini):
     @cached_property
     def api_client(self) -> genai.Client:
@@ -121,8 +119,8 @@ async def telemetry_watchdog_fn(ctx: Context, node_input: Any) -> Event:
             except Exception:
                 pass
 
-        # Switch model configuration to a cheaper/faster model for the remainder of the session
-        global_model.model = CHEAPER_MODEL
+    from app.app_utils.telemetry import checkpoint_telemetry
+    checkpoint_telemetry(ctx, "workflow_node_checkpoint")
 
     if isinstance(node_input, Event):
         return node_input

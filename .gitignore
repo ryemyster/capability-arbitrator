@@ -217,5 +217,7 @@ adk_debug.yaml
 app/telemetry_db.json
 telemetry_db.json
 **/telemetry_db.json
+telemetry_db.json.lock
+**/telemetry_db.json.lock
 .claude
 .codex
