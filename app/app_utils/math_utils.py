@@ -7,6 +7,7 @@ How it works: Evaluates basic calculations using regex matching on numerical str
 
 import re
 
+
 def get_prime_factors(n: int) -> list[int]:
     """
     Returns a list of prime factors of a given integer n.

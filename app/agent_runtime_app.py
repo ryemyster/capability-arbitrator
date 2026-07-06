@@ -21,7 +21,8 @@ Updated: 2026-06-23T13:17:56-06:00
 # limitations under the License.
 import logging
 import os
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import vertexai
 from dotenv import load_dotenv

@@ -9,6 +9,7 @@ How it works: Executes git commands to verify that the current branch is not mai
 import subprocess
 import sys
 
+
 def run_git_cmd(args: list[str]) -> str:
     res = subprocess.run(["git"] + args, capture_output=True, text=True, check=True)
     return res.stdout.strip()

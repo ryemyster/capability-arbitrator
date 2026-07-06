@@ -8,6 +8,7 @@ How it works: Searches a skill's directory for SKILL.md and few_shots.json, form
 import json
 import os
 
+
 def load_skill_instructions(skill_name: str, target_dir: str = None) -> str:
     """Reads the instructions from the local skill SKILL.md file and
     dynamically appends the few-shot examples from few_shots.json at startup.
@@ -29,7 +30,7 @@ def load_skill_instructions(skill_name: str, target_dir: str = None) -> str:
     # Load system instructions from SKILL.md
     instructions = ""
     try:
-        with open(os.path.join(skill_dir, "SKILL.md"), "r", encoding="utf-8") as f:
+        with open(os.path.join(skill_dir, "SKILL.md"), encoding="utf-8") as f:
             content = f.read()
             if content.startswith("---"):
                 parts = content.split("---", 2)
@@ -42,7 +43,7 @@ def load_skill_instructions(skill_name: str, target_dir: str = None) -> str:
 
     # Load few-shot examples from few_shots.json
     try:
-        with open(os.path.join(skill_dir, "few_shots.json"), "r", encoding="utf-8") as f:
+        with open(os.path.join(skill_dir, "few_shots.json"), encoding="utf-8") as f:
             data = json.load(f)
             examples = data.get("examples", [])
             if examples:

@@ -20,16 +20,18 @@ How it works: Inspects session events for cumulative token counts and elapsed ti
              summarizes past turns and configures the global LLM model to a cheaper fallback.
 """
 
-import time
 import os
-from typing import Any
+import time
 from functools import cached_property
+from typing import Any
+
 from google import genai
 from google.adk.agents.context import Context
 from google.adk.events.event import Event
-from google.adk.workflow import FunctionNode
 from google.adk.models.google_llm import Gemini
+from google.adk.workflow import FunctionNode
 from google.genai import types
+
 from app.config import MODEL
 
 PROJECT_ID = os.environ.get("GOOGLE_CLOUD_PROJECT", "kaggle-capstone-500322")
@@ -68,11 +70,11 @@ async def summarize_prior_turns(
             for p in event.content.parts:
                 if hasattr(p, "text") and p.text:
                     history_texts.append(f"{author}: {p.text}")
-                    
+
     if not history_texts:
         return "No history."
     full_text = "\n".join(history_texts)
-    
+
     # Instantiate client and call Gemini to summarize
     client = genai.Client(vertexai=True, project=project_id, location=location)
     prompt = f"Summarize this conversation history concisely for context retention:\n\n{full_text}"
@@ -89,7 +91,7 @@ async def telemetry_watchdog_fn(ctx: Context, node_input: Any) -> Event:
     for e in ctx.session.events:
         if e.usage_metadata:
             total_tokens += e.usage_metadata.total_token_count or 0
-            
+
     # 2. Retrieve elapsed time since request started
     from app.app_utils.telemetry import get_current_telemetry
     telemetry = get_current_telemetry()
@@ -98,11 +100,11 @@ async def telemetry_watchdog_fn(ctx: Context, node_input: Any) -> Event:
         elapsed = time.time() - telemetry["timestamp"]
     else:
         elapsed = time.time() - (ctx.session.events[0].timestamp if ctx.session.events else time.time())
-        
+
     # Check thresholds: 10,000 tokens or 30 seconds
     token_exceeded = total_tokens > 10000
     latency_exceeded = elapsed > 30.0
-    
+
     if token_exceeded or latency_exceeded:
         # Dynamically trigger context pruning if there are prior turns
         if len(ctx.session.events) > 1:
@@ -118,10 +120,10 @@ async def telemetry_watchdog_fn(ctx: Context, node_input: Any) -> Event:
                 ctx.session.events = [summary_event]
             except Exception:
                 pass
-                
+
         # Switch model configuration to a cheaper/faster model for the remainder of the session
         global_model.model = CHEAPER_MODEL
-        
+
     if isinstance(node_input, Event):
         return node_input
     return Event(output=node_input)

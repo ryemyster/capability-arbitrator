@@ -79,7 +79,7 @@ def _observe_stride(
     run_record: dict[str, Any], stride_cfg: dict[str, Any], project_root: str
 ) -> None:
     """Ambient STRIDE observer: audit the file from this run and log findings."""
-    from app.app_utils.patch_agent_utils import run_stride_audit, _parse_findings
+    from app.app_utils.patch_agent_utils import _parse_findings, run_stride_audit
     target = run_record.get("target_file")
     if not target or not os.path.isfile(target):
         logger.debug("[AmbientSTRIDE] No target_file in run record — skipping.")

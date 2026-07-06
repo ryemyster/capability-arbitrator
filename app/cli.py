@@ -25,6 +25,7 @@ import os
 import subprocess
 import sys
 
+
 def run_prompt_sync(prompt: str) -> None:
     """Run the arbitrator agent locally on the prompt and stream responses."""
     # Ensure integration test mode or similar mocks aren't overriding real run unless requested
@@ -34,6 +35,7 @@ def run_prompt_sync(prompt: str) -> None:
     async def _run() -> None:
         from google.adk.runners import InMemoryRunner
         from google.genai import types
+
         from app.agent import app as adk_app
 
         runner = InMemoryRunner(app=adk_app)
@@ -62,8 +64,9 @@ def run_prompt_sync(prompt: str) -> None:
 
 def _flywheel_detect(db_path: str, window: int, threshold: int) -> tuple[list[str], str | None, str | None]:
     """Return (triggered_tags, tag, few_shots_path) or ([], None, None) when nothing to do."""
-    from app.app_utils.flywheel_utils import detect_violations
     import pathlib
+
+    from app.app_utils.flywheel_utils import detect_violations
 
     triggered = detect_violations(db_path, window=window, threshold=threshold)
     if not triggered:
@@ -80,7 +83,10 @@ def _flywheel_write_validate_pr(
 ) -> None:
     """Write, validate, revert-on-failure, or open PR."""
     from app.app_utils.flywheel_utils import (
-        write_few_shot, validate_routing, revert_few_shot, create_pr,
+        create_pr,
+        revert_few_shot,
+        validate_routing,
+        write_few_shot,
     )
 
     original_examples = write_few_shot(few_shots_path, example)
@@ -107,7 +113,7 @@ def _stride_heal_audit(
     target: str, config: dict, project_root: str
 ) -> tuple[list[dict], str]:
     """Run STRIDE audit on target; return (findings, raw_report)."""
-    from app.app_utils.patch_agent_utils import run_stride_audit, _parse_findings
+    from app.app_utils.patch_agent_utils import _parse_findings, run_stride_audit
     stride_skill = os.path.join(project_root, "app", "skills", "stride")
     threshold = config["stride_self_healing"]["detection"]["severity_threshold"]
     report = run_stride_audit(target, stride_skill)
@@ -118,7 +124,12 @@ def _stride_heal_patch_loop(
     finding: dict, target: str, config: dict, project_root: str
 ) -> tuple[bool, str]:
     """Patch-and-verify loop up to max_attempts; return (success, last_output)."""
-    from app.app_utils.patch_agent_utils import generate_patch, apply_patch, verify_patch, revert_file
+    from app.app_utils.patch_agent_utils import (
+        apply_patch,
+        generate_patch,
+        revert_file,
+        verify_patch,
+    )
     patch_skill = os.path.join(project_root, "app", "skills", "patch_agent")
     cfg = config["stride_self_healing"]["verification"]
     commands, max_attempts = cfg["commands"], cfg["max_attempts"]
@@ -138,7 +149,8 @@ def _stride_heal_patch_loop(
 def _run_stride_heal(target: str, mode: str, dry_run: bool) -> None:
     """Execute the STRIDE self-healing pipeline."""
     import pathlib
-    from app.app_utils.patch_agent_utils import load_self_healing_config, create_heal_pr
+
+    from app.app_utils.patch_agent_utils import create_heal_pr, load_self_healing_config
 
     project_root = str(pathlib.Path(__file__).parent.parent)
     config = load_self_healing_config()
@@ -184,8 +196,9 @@ def _run_stride_heal(target: str, mode: str, dry_run: bool) -> None:
 def _run_flywheel(window: int, threshold: int, dry_run: bool) -> None:
     """Execute the Quality Flywheel optimization pipeline."""
     import pathlib
-    from app.app_utils.flywheel_utils import generate_few_shot
+
     from app.app_utils.flywheel_config_loader import load_flywheel_config
+    from app.app_utils.flywheel_utils import generate_few_shot
     from app.app_utils.kpi_config_loader import load_kpi_config
 
     fw_cfg = load_flywheel_config()["quality_flywheel"]
@@ -269,23 +282,17 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     """Standard CLI entrypoint handler."""
     args = _build_parser().parse_args(argv)
-
     if args.command == "run":
         run_prompt_sync(args.prompt)
     elif args.command == "stride-heal":
         from app.app_utils.patch_agent_utils import load_self_healing_config
         cfg = load_self_healing_config()
-        mode = args.mode or cfg["stride_self_healing"]["mode"]
-        _run_stride_heal(target=args.target, mode=mode, dry_run=args.dry_run)
+        _run_stride_heal(target=args.target, mode=args.mode or cfg["stride_self_healing"]["mode"], dry_run=args.dry_run)
     elif args.command == "dashboard":
         from app.dashboard import main as start_dashboard
         start_dashboard()
     elif args.command == "flywheel":
-        _run_flywheel(
-            window=args.window,
-            threshold=args.threshold,
-            dry_run=args.dry_run,
-        )
+        _run_flywheel(window=args.window, threshold=args.threshold, dry_run=args.dry_run)
 
 if __name__ == "__main__":
     main()

@@ -22,6 +22,7 @@ How it works: Serves the custom dashboard at the root path (/) and delegates exe
 import os
 import sys
 from typing import Any
+
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -43,7 +44,7 @@ TEMPLATE_PATH = os.path.join(
 def serve_dashboard() -> HTMLResponse:
     """Serve the single-page premium glassmorphic dashboard."""
     try:
-        with open(TEMPLATE_PATH, "r") as f:
+        with open(TEMPLATE_PATH) as f:
             content = f.read()
         return HTMLResponse(content=content)
     except Exception as e:

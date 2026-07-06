@@ -23,7 +23,9 @@ How it works: Resolves target workspace directory, scans for arbitrator.yaml/jso
 import json
 import os
 from typing import Any
+
 import yaml
+
 
 class CapabilityDefinition:
     """Represents a capability tag routing definition."""
@@ -56,7 +58,7 @@ def load_mcp_configs(target_dir: str) -> dict[str, dict[str, Any]]:
     for file_path in search_files:
         if os.path.exists(file_path):
             try:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
                     # Support standard schema {"mcpServers": {...}} or flat dictionary
                     return data.get("mcpServers", data)
@@ -69,7 +71,7 @@ def discover_local_skills(target_dir: str) -> list[str]:
     skills_dir = os.path.join(target_dir, ".agents", "skills")
     if not os.path.exists(skills_dir):
         skills_dir = os.path.join(target_dir, "app", "skills")
-    
+
     if os.path.isdir(skills_dir):
         try:
             return [
@@ -98,7 +100,7 @@ def _discover_default_caps(target_dir: str) -> list[CapabilityDefinition]:
             default_caps.append(CapabilityDefinition(tag, desc, "skill", skill))
         elif skill not in [c.tag for c in default_caps]:
             default_caps.append(CapabilityDefinition(skill, f"Apply capability-{skill} skill", "skill", skill))
-            
+
     tags = [c.tag for c in default_caps]
     if "research" not in tags:
         default_caps.append(CapabilityDefinition("research", "literature/paper search", "skill", "researcher"))
@@ -111,17 +113,17 @@ def load_arbitrator_config(target_dir: str) -> list[CapabilityDefinition]:
     """Loads capability rules and tag routes from arbitrator.yaml/json or auto-discovers them."""
     yaml_path = os.path.join(target_dir, "arbitrator.yaml")
     json_path = os.path.join(target_dir, "arbitrator.json")
-    
+
     config_data: dict[str, Any] | None = None
     if os.path.exists(yaml_path):
         try:
-            with open(yaml_path, "r", encoding="utf-8") as f:
+            with open(yaml_path, encoding="utf-8") as f:
                 config_data = yaml.safe_load(f)
         except Exception:
             pass
     elif os.path.exists(json_path):
         try:
-            with open(json_path, "r", encoding="utf-8") as f:
+            with open(json_path, encoding="utf-8") as f:
                 config_data = json.load(f)
         except Exception:
             pass
