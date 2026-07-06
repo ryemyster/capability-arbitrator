@@ -10,7 +10,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
 
 *   **[x] Uses ADK 2.0 Graph (Workflow)**
     *   *What:* The agent is constructed as a conditional flowchart (nodes and edges) rather than a flat script.
-    *   *Citation:* Completed in [app/agent.py:L269-273](app/agent.py#L269-273) where `root_workflow` is defined. *(Completed: Phase 13 [Telemetry Watchdog Node for Runtime Budget Guardrail] in [app/app_utils/watchdog_utils.py](app/app_utils/watchdog_utils.py))*
+    *   *Citation:* Completed in [app/agent.py](app/agent.py) where `root_workflow` is defined. *(Completed: Phase 13 [Telemetry Watchdog Node for Runtime Budget Guardrail] in [app/app_utils/watchdog_utils.py](app/app_utils/watchdog_utils.py); hardened to prevent model configuration leaking across sessions.)*
 *   **[x] Implements Conditional Branching**
     *   *What:* Dynamic routing based on intent (routing "math" to calculations, "research" to LLM analysis, etc.).
     *   *Citation:* Completed in [app/agent.py:L125-136](app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](app/agent.py#L252-267). *(Completed: Phase 14 [Scout Supervisor confidence gate and Scout module split] in [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py), [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py), and [app/agent.py](app/agent.py))* *(Completed: Outcome hardening [deterministic math route] in [app/app_utils/math_node_utils.py](app/app_utils/math_node_utils.py) and [app/app_utils/config_loader.py](app/app_utils/config_loader.py))*

@@ -73,7 +73,7 @@ The graph constructs available nodes and toolsets at startup. For each request, 
 | 5 | Execution Node | Runs deterministic code, an MCP-backed node, or an LLM skill. |
 | 6 | Compliance Judge | Scans output for secret-like values and can retry through the Router with a rewrite prompt. |
 | 7 | Product KPI Auditor | Writes outcome verdicts and violations into telemetry. |
-| 8 | Telemetry Watchdog | Can summarize oversized session history and switch the shared model to a cheaper fallback. |
+| 8 | Telemetry Watchdog | Can summarize oversized session history without mutating the model used by later sessions. |
 
 ### Approval resume state
 

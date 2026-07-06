@@ -45,7 +45,7 @@ async def run_watchdog_test() -> None:
         assert len(mock_ctx_below.session.events) == 1, "Context should not have been pruned"
         print("Sub-test 1 (Below Threshold Pass-through) [PASS]")
         
-        # Test 2: Above threshold triggering model switch and context pruning
+        # Test 2: Above threshold triggers pruning without changing later sessions
         mock_ctx_above = MagicMock()
         mock_ctx_above.session = MagicMock()
         
@@ -72,10 +72,10 @@ async def run_watchdog_test() -> None:
         with patch("google.genai.Client", return_value=mock_client):
             res_above = await telemetry_watchdog_fn(mock_ctx_above, "test_input")
             
-        assert global_model.model == "gemini-2.0-flash-lite", f"Expected gemini-2.0-flash-lite, got {global_model.model}"
+        assert global_model.model == "gemini-3.1-flash-lite", f"Shared model changed unexpectedly: {global_model.model}"
         assert len(mock_ctx_above.session.events) == 1, f"Expected 1 pruned event, got {len(mock_ctx_above.session.events)}"
         assert "[CONTEXT PRUNED" in mock_ctx_above.session.events[0].content.parts[0].text, "Event should contain context pruned text"
-        print("Sub-test 2 (Above Threshold Pruning and Switching) [PASS]")
+        print("Sub-test 2 (Above Threshold Pruning Without Model Leakage) [PASS]")
         
         print("[PASS] Telemetry Watchdog functionality validated successfully.")
         

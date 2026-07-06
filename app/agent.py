@@ -156,7 +156,6 @@ def security_screen(node_input: str) -> Event:
     """Security screen scanner to check inputs for PII leaks."""
     input_str = str(node_input)
     run = init_telemetry(input_str)
-    run_state = {"telemetry_run_id": run["telemetry_run_id"]}
     pii_patterns = {
         "Social Security Number": r"\b\d{3}-\d{2,3}-\d{4}\b",
         "Email Address": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
@@ -168,11 +167,17 @@ def security_screen(node_input: str) -> Event:
     if detected:
         pii_list = ", ".join(detected)
         record_security_screen(pii_detected=True, pii_types=detected)
+        # Durable snapshot: the ContextVar can be lost across task/runner boundaries
+        # (e.g. adk web's playground server), so ctx.state must carry the full run
+        # dict, not just its id, or a fresh run has nothing to recover from. Taken
+        # after record_security_screen so the snapshot reflects the PII detection.
+        run_state = {"telemetry_run_id": run["telemetry_run_id"], "telemetry_snapshot": dict(run)}
         run_state.update(
             build_approval_state("pii_screen", "scout", input_str)
         )
         return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval", state=run_state)  # type: ignore
     record_security_screen(pii_detected=False, pii_types=[])
+    run_state = {"telemetry_run_id": run["telemetry_run_id"], "telemetry_snapshot": dict(run)}
     return Event(output=node_input, route="safe", state=run_state)  # type: ignore
 
 

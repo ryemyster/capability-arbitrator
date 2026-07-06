@@ -80,11 +80,9 @@ def update_telemetry(updates: dict[str, Any]) -> None:
         run.update(updates)
         active_run_telemetry.set(run)
 
-
 def reset_telemetry() -> None:
     """Clear task-local telemetry between isolated tests or operations."""
     active_run_telemetry.set(None)
-
 
 def restore_telemetry(ctx: Any) -> dict[str, Any] | None:
     """Restore an interrupted run from workflow state in a new async request."""
@@ -92,18 +90,18 @@ def restore_telemetry(ctx: Any) -> dict[str, Any] | None:
     state_run_id = state.get("telemetry_run_id") if state is not None else None
     run = get_current_telemetry()
     if state_run_id and (not run or run.get("telemetry_run_id") != state_run_id):
-        run = next(
-            (
-                saved
-                for saved in load_history(DB_FILE)
-                if saved.get("telemetry_run_id") == state_run_id
-            ),
-            None,
-        )
+        # ContextVar can be dropped across task boundaries (e.g. adk web),
+        # so prefer the durable ctx.state snapshot over disk history, which
+        # won't yet have a fresh run.
+        snapshot = state.get("telemetry_snapshot") if state is not None else None
+        if isinstance(snapshot, dict) and snapshot.get("telemetry_run_id") == state_run_id:
+            run = dict(snapshot)
+        else:
+            history = load_history(DB_FILE)
+            run = next((r for r in history if r.get("telemetry_run_id") == state_run_id), None)
         if run:
             active_run_telemetry.set(run)
     return run
-
 
 def checkpoint_telemetry(ctx: Any, run_source: str) -> dict[str, Any] | None:
     """Persist the current graph state without depending on an app callback."""
@@ -119,7 +117,11 @@ def checkpoint_telemetry(ctx: Any, run_source: str) -> dict[str, Any] | None:
             run_source if run.get("run_source") == "unknown" else run["run_source"]
         ),
     })
-    return save_run(notify_ambient=False)
+    saved = save_run(notify_ambient=False)
+    state = getattr(ctx, "state", None)
+    if state is not None and saved is not None:  # outlives the ContextVar across tasks
+        state["telemetry_snapshot"] = dict(saved)
+    return saved
 def record_security_screen(pii_detected: bool, pii_types: list[str]) -> None:
     """Record PII screen details."""
     updates: dict[str, Any] = {
