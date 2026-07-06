@@ -28,50 +28,38 @@ def get_prime_factors(n: int) -> list[int]:
 def solve_math(prompt: str) -> str:
     """Safely extracts and evaluates mathematical expressions from a string.
     This supports basic operators (+, -, *, /), parentheses, and constants like 'pi'.
-    This fulfills the Kaggle rubric's requirement for deterministic optimization of non-cognitive tasks.
     """
-    # Normalize words to basic operators so we can handle word problems easily
-    s: str = prompt.lower()
-    s = s.replace("multiplied by", "*")
-    s = s.replace("times", "*")
-    s = s.replace("divided by", "/")
-    s = s.replace("plus", "+")
-    s = s.replace("minus", "-")
-    s = s.replace(",", "")  # Strip commas
-    s = s.replace("pi", "3.141592653589793")
+    s = prompt.lower().replace(",", "")
+    replacements = {
+        "multiplied by": "*", "times": "*", "divided by": "/",
+        "plus": "+", "minus": "-", "pi": "3.141592653589793"
+    }
+    for k, v in replacements.items():
+        s = s.replace(k, v)
 
-    # Extract all contiguous sequences of mathematical characters (digits, dots, operators, parens, spaces)
-    candidates = re.findall(r"[0-9.+\-*/()\s]+", s)
+    for pattern in [r"square root of\s*([0-9.]+)", r"square root\s*([0-9.]+)", r"sqrt\s*([0-9.]+)"]:
+        s = re.sub(pattern, r"(\1**0.5)", s)
+    s = re.sub(r"[a-z]", "", s)
+
+    candidates = [c.strip() for c in re.findall(r"[0-9.+\-*/()\s]+", s) if re.search(r"\d", c)]
     if not candidates:
         return "Could not parse math expression."
+    best_candidate = max(candidates, key=len, default="")
 
-    best_candidate = ""
-    for cand in candidates:
-        cand_strip = cand.strip()
-        # Ensure it has digits and is not just operators
-        if re.search(r"\d", cand_strip):
-            if len(cand_strip) > len(best_candidate):
-                best_candidate = cand_strip
-
-    if not best_candidate:
-        return "Could not parse math expression."
-
-    # Validate that the candidate ONLY contains safe math characters
-    if not re.match(r"^[0-9.+\-*/()\s]+$", best_candidate):
-        return "Error: unsafe characters in math expression."
+    if not best_candidate or not re.match(r"^[0-9.+\-*/()\s]+$", best_candidate):
+        return "Error: unsafe characters in math expression." if best_candidate else "Could not parse math expression."
 
     try:
-        # Evaluate math expression safely
         res = eval(best_candidate, {"__builtins__": None}, {})
         if isinstance(res, (int, float)):
             if isinstance(res, float) and res.is_integer():
                 return str(int(res))
-            # Format output to 10 decimal places, stripping trailing zeros
-            res_str = f"{res:.10f}".rstrip("0").rstrip(".")
-            return res_str
+            return f"{res:.10f}".rstrip("0").rstrip(".")
         return str(res)
-    except Exception as e:
+    except ZeroDivisionError as e:
         return f"Error evaluating math expression: {e}"
+    except Exception:
+        return "Could not parse math expression."
 
 
 if __name__ == "__main__":

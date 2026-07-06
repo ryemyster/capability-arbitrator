@@ -15,6 +15,7 @@ class TestPrimeFactors(unittest.TestCase):
 
     def test_solve_math_word_problem(self):
         self.assertEqual(solve_math("What is 2500 multiplied by 4?"), "10000")
+        self.assertEqual(solve_math("What is 847 times 293, minus the square root of 1936?"), "248127")
 
     def test_math_telemetry_keeps_node_tokens_zero(self):
         run = calculate_savings({

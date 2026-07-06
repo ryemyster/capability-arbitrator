@@ -80,24 +80,41 @@ router_fn = FunctionNode(name="router", func=router_node)
 async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event | RequestInput, None]:
     """Approval node with human-in-the-loop validation."""
     import sys
+    from app.app_utils.telemetry import get_current_telemetry
     alert_msg = str(node_input) or "High-risk routing."
+    
+    def _route_after_approval() -> Event:
+        telemetry = get_current_telemetry() or {}
+        if telemetry.get("pii_detected"):
+            return Event(output=telemetry.get("prompt", ""), route="scout")
+        tag = telemetry.get("scout_tag", "approval")
+        return Event(output={"capability_tag": tag, "prompt": telemetry.get("prompt", "")}, route="execute")
+
     if any("_inference_runner.py" in arg for arg in sys.argv):
         msg = f"Approval auto-granted in eval mode. Details: {alert_msg}"
         yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-        yield Event(output=msg)
+        yield _route_after_approval()
         return
     if getattr(ctx, "resume_inputs", None) is None or "approval_req" not in ctx.resume_inputs:
         record_hitl(escalated=True, approved=False, latency=0.0)
         yield RequestInput(interrupt_id="approval_req", message=f"🚨 PAUSING WORKFLOW 🚨\n{alert_msg}\n\nApprove routing? (y/n)")
         return
     approved = ctx.resume_inputs.get("approval_req", "")
-    is_approved = approved.lower() in ["y", "yes", "approve", "true"]
+    if isinstance(approved, dict):
+        approved = approved.get("output", "")
+    is_approved = str(approved).lower() in ["y", "yes", "approve", "true"]
     record_hitl(escalated=True, approved=is_approved, latency=5.0)
     msg = "Approval granted. Continuing..." if is_approved else "Approval denied. Halting workflow."
     yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-    yield Event(output=msg)
+    
+    if is_approved:
+        yield _route_after_approval()
+    else:
+        yield Event(output=msg, route="halt")
 
-approval_fn = FunctionNode(name="approval", func=approval_node)
+# Rerun on resume is critical so that when a human approves/denies, the node's code runs again
+# to dynamically yield the route ('scout', 'execute', or 'halt') instead of being bypassed by the cache.
+approval_fn = FunctionNode(name="approval", func=approval_node, rerun_on_resume=True)
 
 # 2. Dynamically set up MCP tools based on configs
 mcp_tools = []
@@ -214,12 +231,15 @@ for cap in caps:
 
     if target_node:
         edges.append(Edge(from_node=router_fn, to_node=target_node, route=cap.tag))
-        if target_node not in terminal_nodes:
+        if target_node not in terminal_nodes and target_node != approval_fn:
             terminal_nodes.append(target_node)
 
 edges.append(Edge(from_node=router_fn, to_node=approval_fn, route=DEFAULT_ROUTE))
-if approval_fn not in terminal_nodes:
-    terminal_nodes.append(approval_fn)
+
+# Add routing edges from approval to continue or halt
+edges.append(Edge(from_node=approval_fn, to_node=llm_scout, route="scout"))
+edges.append(Edge(from_node=approval_fn, to_node=router_fn, route="execute"))
+edges.append(Edge(from_node=approval_fn, to_node=compliance_judge, route="halt"))
 
 # Wire all terminal nodes through the Compliance Judge before the Telemetry Watchdog
 for t_node in terminal_nodes:
@@ -228,6 +248,34 @@ for t_node in terminal_nodes:
 edges.append(Edge(from_node=compliance_judge, to_node=product_agent, route="safe"))
 edges.append(Edge(from_node=product_agent, to_node=telemetry_watchdog))
 edges.append(Edge(from_node=compliance_judge, to_node=router_fn, route="retry"))
+
+from google.adk.plugins import BasePlugin
+from google.adk.agents.invocation_context import InvocationContext
+from app.app_utils.telemetry import save_run, update_telemetry, classify_run_source
+
+class TelemetryPlugin(BasePlugin):
+    async def after_run_callback(self, *, invocation_context: InvocationContext) -> None:
+        user_id = invocation_context.user_id
+        session_id = invocation_context.session.id
+        
+        run_config = getattr(invocation_context, "run_config", None)
+        force_local = False
+        if run_config is not None:
+            if isinstance(run_config, dict):
+                force_local = bool(run_config.get("force_local"))
+            else:
+                metadata = getattr(run_config, "custom_metadata", None) or {}
+                if isinstance(metadata, dict):
+                    force_local = bool(metadata.get("force_local"))
+
+        run_source = classify_run_source(user_id, session_id, force_local)
+
+        update_telemetry({
+            "user_id": user_id,
+            "session_id": session_id,
+            "run_source": run_source,
+        })
+        save_run()
 
 root_workflow = Workflow(
     name="root_agent",
@@ -240,5 +288,6 @@ app = App(
     plugins=[
         LoggingPlugin(),
         DebugLoggingPlugin(output_path="/tmp/adk_debug.yaml"),
+        TelemetryPlugin("telemetry"),
     ],
 )

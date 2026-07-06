@@ -24,11 +24,16 @@ import os
 import time
 from typing import Any
 
+import pathlib
+
 # Global dict to track telemetry metrics for the active request/session
 active_run_telemetry: dict[str, Any] = {}
 
-target_dir = os.environ.get("ARBITRATOR_CWD", os.getcwd())
-DB_FILE = os.path.join(target_dir, "telemetry_db.json")
+if os.environ.get("K_SERVICE"):
+    DB_FILE = "/tmp/telemetry_db.json"
+else:
+    target_dir = os.environ.get("ARBITRATOR_CWD", str(pathlib.Path(__file__).parent.parent.parent))
+    DB_FILE = os.path.join(target_dir, "telemetry_db.json")
 
 def init_telemetry(prompt: str) -> dict[str, Any]:
     """Initialize a telemetry recording session for the current prompt."""
@@ -238,7 +243,17 @@ def save_run() -> dict[str, Any] | None:
     run = calculate_savings(run)
 
     history = get_history()
-    history.append(run)
+    # De-duplicate: update in-place if a run with the same session_id already exists
+    session_id = run.get("session_id")
+    replaced = False
+    if session_id and session_id != "unknown":
+        for i, h in enumerate(history):
+            if h.get("session_id") == session_id:
+                history[i] = run
+                replaced = True
+                break
+    if not replaced:
+        history.append(run)
 
     # Keep database capped at last 1000 runs
     if len(history) > 1000:
