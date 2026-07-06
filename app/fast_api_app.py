@@ -21,7 +21,8 @@ How it works: Obtains the standard ADK FastAPI app, mounts custom dashboard/tele
 import json
 import logging
 import os
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import google.auth
 from fastapi import FastAPI, Request
@@ -146,7 +147,7 @@ TEMPLATE_PATH = os.path.join(
 def serve_dashboard() -> HTMLResponse:
     """Serve the single-page premium glassmorphic dashboard."""
     try:
-        with open(TEMPLATE_PATH, "r") as f:
+        with open(TEMPLATE_PATH) as f:
             content = f.read()
         return HTMLResponse(content=content)
     except Exception as e:
@@ -205,7 +206,7 @@ def get_trace_event(event: Any) -> list[str]:
             traces.append("Pruned all LLM execution tools/skills. Handed arithmetic off to deterministic Python math.")
         else:
             traces.append("Pruned 4 unused skills/tool sets to prevent context saturation and hallucinatory behavior.")
-            
+
     return traces
 
 
@@ -229,7 +230,6 @@ async def event_generator(prompt: str, force_local: bool = False) -> AsyncGenera
             if hasattr(event, "content") and event.content:
                 for part in event.content.parts:
                     if hasattr(part, "text") and part.text:
-                        has_exec_node = True
                         yield f"data: {json.dumps({'type': 'content', 'text': part.text})}\n\n"
 
             # Final output
@@ -237,9 +237,9 @@ async def event_generator(prompt: str, force_local: bool = False) -> AsyncGenera
                 if isinstance(event.output, dict) and "capability_tag" in event.output:
                     continue
                 yield f"data: {json.dumps({'type': 'output', 'text': str(event.output)})}\n\n"
-        
+
         # Output final progressive disclosure statistics
-        from app.app_utils.telemetry import get_current_telemetry, calculate_savings
+        from app.app_utils.telemetry import calculate_savings, get_current_telemetry
         run_data = get_current_telemetry()
         if run_data:
             run_data = calculate_savings(run_data)

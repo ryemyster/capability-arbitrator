@@ -21,24 +21,26 @@ How it works: Scans the target workspace file structure, determines relevant tes
 """
 
 import os
-import time
 import subprocess
-from typing import Any, AsyncGenerator
+import time
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from google.adk.agents.context import Context
 from google.adk.events.event import Event
 from google.adk.workflow import FunctionNode
 from google.genai import types
 
+from app.app_utils.config_loader import get_target_dir
 from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.telemetry import record_node_execution
-from app.app_utils.config_loader import get_target_dir
+
 
 def _detect_devops_command(prompt: str, t_dir: str) -> list[str]:
     """Helper to detect language/framework and return the correct test/lint command."""
     prompt_lower = prompt.lower()
     is_test = any(w in prompt_lower for w in ["test", "pytest", "run tests", "check tests"])
-    
+
     # 1. Node.js project
     if os.path.exists(os.path.join(t_dir, "package.json")):
         return ["npm", "test"] if is_test else ["npm", "run", "lint"]
@@ -71,7 +73,7 @@ async def devops_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event, No
     target_dir = get_target_dir()
     cmd = _detect_devops_command(prompt, target_dir)
     desc = f"Running: {' '.join(cmd)}"
-    
+
     yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=f"⚙️ DevOps Engine: {desc}\n")]))
     try:
         res = subprocess.run(cmd, capture_output=True, text=True)

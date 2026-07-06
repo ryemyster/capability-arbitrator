@@ -17,11 +17,11 @@ File: agent.py
 Purpose: Defines the dynamic capability arbitrator agent workflow.
 Why/How: A progressive disclosure traffic router that assigns tasks to nodes based on target workspace configurations.
 """
-import os
 import re
-from typing import Any, AsyncGenerator
-from dotenv import load_dotenv
+from collections.abc import AsyncGenerator
+from typing import Any
 
+from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 from google.adk.agents.context import Context
 from google.adk.apps import App
@@ -32,23 +32,23 @@ from google.adk.plugins.logging_plugin import LoggingPlugin
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from google.adk.workflow import DEFAULT_ROUTE, START, Edge, FunctionNode, Workflow, node
+from google.genai import types
 from mcp import StdioServerParameters
 
-from google.genai import types
-from app.app_utils.routing_utils import get_prompt_text
-from app.app_utils.skill_utils import load_skill_instructions
-from app.app_utils.config_loader import get_target_dir, load_arbitrator_config, load_mcp_configs
 from app.app_utils.compliance_judge_utils import compliance_judge
-from app.app_utils.product_agent_utils import product_agent
+from app.app_utils.config_loader import (
+    get_target_dir,
+    load_arbitrator_config,
+    load_mcp_configs,
+)
 from app.app_utils.devops_utils import devops_fn
 from app.app_utils.math_node_utils import math_fn
-from app.app_utils.scout_utils import build_scout_node
+from app.app_utils.product_agent_utils import product_agent
+from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.scout_supervisor_utils import scout_supervisor
-from app.app_utils.telemetry import (
-    init_telemetry,
-    record_security_screen,
-    record_hitl
-)
+from app.app_utils.scout_utils import build_scout_node
+from app.app_utils.skill_utils import load_skill_instructions
+from app.app_utils.telemetry import init_telemetry, record_hitl, record_security_screen
 
 load_dotenv()
 
@@ -68,7 +68,7 @@ def router_node(ctx: Context, node_input: Any) -> Event:
         # On compliance retry, the judge injects an enriched prompt into the dict
         prompt = node_input.get("prompt") or get_prompt_text(ctx) or str(node_input)
     elif hasattr(node_input, "capability_tag"):
-        tag = getattr(node_input, "capability_tag")
+        tag = node_input.capability_tag
         prompt = get_prompt_text(ctx) or str(node_input)
     else:
         tag = str(node_input)
@@ -102,7 +102,7 @@ approval_fn = FunctionNode(name="approval", func=approval_node)
 # 2. Dynamically set up MCP tools based on configs
 mcp_tools = []
 if mcp_settings:
-    for name, srv in mcp_settings.items():
+    for _name, srv in mcp_settings.items():
         try:
             mcp_tools.append(
                 McpToolset(
@@ -211,7 +211,7 @@ for cap in caps:
             target_node = math_fn
         else:
             target_node = approval_fn
-    
+
     if target_node:
         edges.append(Edge(from_node=router_fn, to_node=target_node, route=cap.tag))
         if target_node not in terminal_nodes:

@@ -253,6 +253,7 @@ def save_run() -> dict[str, Any] | None:
     # Notify ambient supervisors (experimental — never blocks the main flow)
     try:
         import pathlib
+
         from app.app_utils.ambient_supervisor import on_run_saved
         on_run_saved(run, str(pathlib.Path(DB_FILE).parent))
     except Exception:
@@ -265,7 +266,7 @@ def get_history() -> list[dict[str, Any]]:
     if not os.path.exists(DB_FILE):
         return []
     try:
-        with open(DB_FILE, "r") as f:
+        with open(DB_FILE) as f:
             return json.load(f)
     except Exception:
         return []

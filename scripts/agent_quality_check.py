@@ -19,19 +19,19 @@ EXEMPT_FILES = ["config.py", "__init__.py"]
 def check_file(filepath: str) -> list[str]:
     errors = []
     filename = os.path.basename(filepath)
-    
-    with open(filepath, "r", encoding="utf-8") as f:
+
+    with open(filepath, encoding="utf-8") as f:
         content = f.read()
-        
+
     lines = content.splitlines()
     if filename not in EXEMPT_FILES and len(lines) > MAX_FILE_LINES:
         errors.append(f"File is too long: {len(lines)} lines (max {MAX_FILE_LINES})")
-        
+
     try:
         tree = ast.parse(content, filename=filepath)
     except SyntaxError as e:
         return [f"Syntax error: {e}"]
-        
+
     # 1. Check for Module Header Block (Module docstring with Purpose, Why, How)
     module_doc = ast.get_docstring(tree)
     if filename not in EXEMPT_FILES:
@@ -45,7 +45,7 @@ def check_file(filepath: str) -> list[str]:
                     missing_sections.append(term.capitalize())
             if missing_sections:
                 errors.append(f"Module docstring header is missing sections: {', '.join(missing_sections)}")
-            
+
     # 2. Walk AST to inspect functions
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -53,7 +53,7 @@ def check_file(filepath: str) -> list[str]:
             fn_lines = (node.end_lineno - node.lineno) + 1
             if filename not in EXEMPT_FILES and fn_lines > MAX_FUNCTION_LINES:
                 errors.append(f"Function/node '{node.name}' at line {node.lineno} is too long: {fn_lines} lines (max {MAX_FUNCTION_LINES})")
-                
+
             # Check for type annotations on arguments and return type for helper/node functions
             # Exempt standard context, node_input, self, cls parameter checks
             for arg in node.args.args:
@@ -61,20 +61,20 @@ def check_file(filepath: str) -> list[str]:
                     continue
                 if not arg.annotation:
                     errors.append(f"Function '{node.name}' at line {node.lineno} is missing type annotation for argument '{arg.arg}'")
-            
+
             # Check return type (except __init__)
             if node.name != "__init__" and not node.returns:
                 errors.append(f"Function '{node.name}' at line {node.lineno} is missing return type annotation")
-                
+
     return errors
 
 def main():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     app_dir = os.path.join(base_dir, "app")
-    
+
     failed = False
     print("Running AI Agent Code Quality Checks...")
-    
+
     for root, _, files in os.walk(app_dir):
         if "__pycache__" in root or ".adk" in root:
             continue
@@ -90,7 +90,7 @@ def main():
                     failed = True
                 else:
                     print(f"✅ {rel_path} passed.")
-                    
+
     if failed:
         print("\nCode quality checks failed. Please refactor to comply with standards.")
         sys.exit(1)

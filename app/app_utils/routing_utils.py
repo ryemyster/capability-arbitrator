@@ -7,6 +7,7 @@ How it works: Inspects the Context message parts structure and joins text parts 
 
 from google.adk.agents.context import Context
 
+
 def get_prompt_text(ctx: Context) -> str:
     """Helper to retrieve the original user prompt text from the context.
     We need this because down-stream nodes like the math node only receive the route output by default.

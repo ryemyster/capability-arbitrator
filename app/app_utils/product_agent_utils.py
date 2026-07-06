@@ -31,7 +31,11 @@ from google.adk.events.event import Event
 from google.adk.workflow import FunctionNode
 
 from app.app_utils.kpi_config_loader import load_kpi_config
-from app.app_utils.telemetry import calculate_savings, get_current_telemetry, update_telemetry
+from app.app_utils.telemetry import (
+    calculate_savings,
+    get_current_telemetry,
+    update_telemetry,
+)
 
 
 def _pa_cfg() -> dict:
