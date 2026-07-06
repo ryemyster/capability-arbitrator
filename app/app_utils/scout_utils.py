@@ -32,7 +32,7 @@ from pydantic import Field, create_model
 
 from app.app_utils.config_loader import CapabilityDefinition
 from app.app_utils.routing_utils import get_prompt_text
-from app.app_utils.telemetry import record_scout
+from app.app_utils.telemetry import checkpoint_telemetry, record_scout, restore_telemetry
 from app.app_utils.watchdog_utils import LOCATION, PROJECT_ID
 from app.config import MODEL
 
@@ -110,6 +110,7 @@ def build_scout_node(capabilities: list[CapabilityDefinition]) -> FunctionNode:
     scout_output = _build_scout_schema(capabilities)
     async def llm_scout_fn(ctx: Context, node_input: Any) -> Event:
         """Classifies the prompt and returns a capability tag plus confidence."""
+        restore_telemetry(ctx)
         prompt = get_prompt_text(ctx) or (str(node_input) if node_input else "")
         if _is_dangerous_database_prompt(prompt):
             record_scout(
@@ -120,6 +121,7 @@ def build_scout_node(capabilities: list[CapabilityDefinition]) -> FunctionNode:
                 100.0,
                 token_source="deterministic_zero",
             )
+            checkpoint_telemetry(ctx, "workflow_node_checkpoint")
             return Event(
                 output={"capability_tag": "approval", "confidence_score": 100.0}
             )
@@ -140,6 +142,7 @@ def build_scout_node(capabilities: list[CapabilityDefinition]) -> FunctionNode:
         tag, confidence = _parse_scout_payload(response.text)
         in_tok, out_tok = _read_usage_tokens(response)
         record_scout(tag, latency, in_tok, out_tok, confidence)
+        checkpoint_telemetry(ctx, "workflow_node_checkpoint")
         return Event(output={"capability_tag": tag, "confidence_score": confidence})
 
     return FunctionNode(name="llm_scout", func=llm_scout_fn)
