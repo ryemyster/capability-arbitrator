@@ -32,6 +32,9 @@ def test_dashboard_serve_root() -> None:
     assert "Capability Arbitrator" in response.text
     assert "Token Source" in response.text
     assert "Run Source" in response.text
+    assert 'id="val-hitl-approved"' in response.text
+    assert 'id="val-hitl-denied"' in response.text
+    assert "window.setInterval(fetchMetrics, 5000)" in response.text
 
 def test_dashboard_serve_metrics() -> None:
     """Verifies that the /api/metrics endpoint returns the historical logs list."""

@@ -26,6 +26,9 @@ from google.adk.agents.context import Context
 from google.adk.events.event import Event
 from google.adk.workflow import FunctionNode
 
+from app.app_utils.approval_utils import build_approval_state
+from app.app_utils.routing_utils import get_prompt_text
+
 CONFIDENCE_THRESHOLD = 75.0
 
 
@@ -62,7 +65,13 @@ def scout_supervisor_node(ctx: Context, node_input: Any) -> Event:
             f"Scout selected '{tag}' with {confidence:.1f}% confidence, "
             f"below the {CONFIDENCE_THRESHOLD:.0f}% approval threshold."
         )
-        return Event(output=summary, route="approval")  # type: ignore[arg-type]
+        state = build_approval_state(
+            "low_confidence",
+            "execute",
+            get_prompt_text(ctx),
+            capability_tag=tag,
+        )
+        return Event(output=summary, route="approval", state=state)  # type: ignore[arg-type]
 
     return Event(output={"capability_tag": tag, "confidence_score": confidence}, route="continue")  # type: ignore[arg-type]
 

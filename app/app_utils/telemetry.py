@@ -16,34 +16,34 @@
 File: telemetry.py
 Purpose: Tracks, calculates, and persists telemetry and token savings metrics.
 Why it exists: We need a reliable metrics store to compare the Capability Arbitrator's performance against a monolithic baseline.
-How it works: Uses ContextVar to track current run stats in a thread-safe manner, writing results to a local JSON database.
+How it works: Tracks current run stats in memory, then delegates safe JSON storage to telemetry_store.
 """
 
-import json
 import os
+import pathlib
 import time
+import uuid
+from contextvars import ContextVar
 from typing import Any
 
-import pathlib
+from app.app_utils.telemetry_store import load_history, persist_run, resolve_db_file
 
-# Global dict to track telemetry metrics for the active request/session
-active_run_telemetry: dict[str, Any] = {}
+# Each async request receives its own run so cloud concurrency cannot mix metrics.
+active_run_telemetry: ContextVar[dict[str, Any] | None] = ContextVar(
+    "active_run_telemetry", default=None
+)
 
-if os.environ.get("K_SERVICE"):
-    DB_FILE = "/tmp/telemetry_db.json"
-else:
-    target_dir = os.environ.get("ARBITRATOR_CWD", str(pathlib.Path(__file__).parent.parent.parent))
-    DB_FILE = os.path.join(target_dir, "telemetry_db.json")
+DB_FILE = resolve_db_file()
 
 def init_telemetry(prompt: str) -> dict[str, Any]:
     """Initialize a telemetry recording session for the current prompt."""
-    global active_run_telemetry
-    active_run_telemetry = {
+    run = {
         "timestamp": time.time(),
         "prompt": prompt,
         "user_id": "unknown",
         "session_id": "unknown",
         "invocation_id": "unknown",
+        "telemetry_run_id": str(uuid.uuid4()),
         "run_source": "unknown",
         "pii_detected": False,
         "pii_types": [],
@@ -59,25 +59,67 @@ def init_telemetry(prompt: str) -> dict[str, Any]:
         "mcp_tool_calls": 0,
         "hitl_escalated": False,
         "hitl_approved": False,
+        "hitl_status": "not_escalated",
         "hitl_latency": 0.0,
         "total_latency": 0.0,
         "scout_token_source": "unknown",
         "node_token_source": "unknown",
         "savings_method": "monolithic_baseline_estimate",
     }
-    return active_run_telemetry
+    active_run_telemetry.set(run)
+    return run
 
 def get_current_telemetry() -> dict[str, Any] | None:
     """Retrieve the current active request's telemetry dict."""
-    global active_run_telemetry
-    return active_run_telemetry if active_run_telemetry else None
+    return active_run_telemetry.get()
 
 def update_telemetry(updates: dict[str, Any]) -> None:
     """Apply updates to the active telemetry session."""
-    global active_run_telemetry
-    if active_run_telemetry:
-        active_run_telemetry.update(updates)
+    run = get_current_telemetry()
+    if run:
+        run.update(updates)
+        active_run_telemetry.set(run)
 
+
+def reset_telemetry() -> None:
+    """Clear task-local telemetry between isolated tests or operations."""
+    active_run_telemetry.set(None)
+
+
+def restore_telemetry(ctx: Any) -> dict[str, Any] | None:
+    """Restore an interrupted run from workflow state in a new async request."""
+    state = getattr(ctx, "state", None)
+    state_run_id = state.get("telemetry_run_id") if state is not None else None
+    run = get_current_telemetry()
+    if state_run_id and (not run or run.get("telemetry_run_id") != state_run_id):
+        run = next(
+            (
+                saved
+                for saved in load_history(DB_FILE)
+                if saved.get("telemetry_run_id") == state_run_id
+            ),
+            None,
+        )
+        if run:
+            active_run_telemetry.set(run)
+    return run
+
+
+def checkpoint_telemetry(ctx: Any, run_source: str) -> dict[str, Any] | None:
+    """Persist the current graph state without depending on an app callback."""
+    run = restore_telemetry(ctx)
+    if not run:
+        return None
+    session = getattr(ctx, "session", None)
+    update_telemetry({
+        "user_id": getattr(session, "user_id", None) or run.get("user_id", "unknown"),
+        "session_id": getattr(session, "id", None) or run.get("session_id", "unknown"),
+        "telemetry_run_id": run.get("telemetry_run_id"),
+        "run_source": (
+            run_source if run.get("run_source") == "unknown" else run["run_source"]
+        ),
+    })
+    return save_run(notify_ambient=False)
 def record_security_screen(pii_detected: bool, pii_types: list[str]) -> None:
     """Record PII screen details."""
     updates: dict[str, Any] = {
@@ -90,7 +132,6 @@ def record_security_screen(pii_detected: bool, pii_types: list[str]) -> None:
             "scout_token_source": "deterministic_zero",
         })
     update_telemetry(updates)
-
 def record_scout(
     tag: str,
     latency: float,
@@ -109,7 +150,6 @@ def record_scout(
         "scout_output_tokens": output_tokens,
         "scout_token_source": source,
     })
-
 def record_node_execution(node_name: str, latency: float, input_tokens: int, output_tokens: int) -> None:
     """Record execution node details."""
     update_telemetry({
@@ -118,25 +158,25 @@ def record_node_execution(node_name: str, latency: float, input_tokens: int, out
         "node_input_tokens": input_tokens,
         "node_output_tokens": output_tokens
     })
-
 def record_mcp_tool_call() -> None:
     """Increment MCP tool call counter."""
-    global active_run_telemetry
-    if active_run_telemetry:
-        active_run_telemetry["mcp_tool_calls"] = active_run_telemetry.get("mcp_tool_calls", 0) + 1
-
-def record_hitl(escalated: bool, approved: bool, latency: float) -> None:
+    run = get_current_telemetry()
+    if run:
+        run["mcp_tool_calls"] = run.get("mcp_tool_calls", 0) + 1
+        active_run_telemetry.set(run)
+def record_hitl(escalated: bool, approved: bool | None, latency: float) -> None:
     """Record Human-in-the-Loop approval metrics."""
+    status = "pending" if approved is None else ("approved" if approved else "denied")
     update_telemetry({
         "node_name": "approval",
         "node_input_tokens": 0,
         "node_output_tokens": 0,
         "node_token_source": "deterministic_zero",
         "hitl_escalated": escalated,
-        "hitl_approved": approved,
+        "hitl_approved": approved is True,
+        "hitl_status": status if escalated else "not_escalated",
         "hitl_latency": latency
     })
-
 def _estimate_node_tokens(node_name: str, prompt_tokens: int) -> tuple[int, int]:
     """Estimate node input and output tokens if not captured."""
     if node_name in ["devops", "math"]:
@@ -148,7 +188,6 @@ def _estimate_node_tokens(node_name: str, prompt_tokens: int) -> tuple[int, int]
     if node_name == "stride":
         return prompt_tokens + 2000, 800
     return prompt_tokens + 1000, 200
-
 def classify_run_source(user_id: str, session_id: str | None, force_local: bool) -> str:
     """Label where a telemetry run came from so the dashboard can show provenance."""
     if user_id == "pubsub-user" or (session_id or "").startswith("pubsub-session"):
@@ -158,7 +197,6 @@ def classify_run_source(user_id: str, session_id: str | None, force_local: bool)
     if force_local or os.environ.get("INTEGRATION_TEST") == "TRUE":
         return "local_test_runner"
     return "agent_runtime"
-
 def _resolve_scout_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
     """Return Scout token counts and whether they were measured or estimated."""
     raw_scout_in = run.get("scout_input_tokens") or 0
@@ -168,7 +206,6 @@ def _resolve_scout_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int,
         return raw_scout_in, raw_scout_out, recorded_source
     token_source = "actual" if raw_scout_in > 0 or raw_scout_out > 0 else "estimated"
     return raw_scout_in or (prompt_tokens + 1200), raw_scout_out or 50, token_source
-
 def _resolve_node_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int, int, str]:
     """Return execution-node token counts and their provenance label."""
     node_in = run.get("node_input_tokens") or 0
@@ -180,7 +217,6 @@ def _resolve_node_tokens(run: dict[str, Any], prompt_tokens: int) -> tuple[int, 
         node_in, node_out = _estimate_node_tokens(node_name, prompt_tokens)
         return node_in, node_out, "estimated"
     return node_in, node_out, "actual"
-
 def _calculate_cost_savings(
     monolithic_in: int,
     monolithic_out: int,
@@ -191,7 +227,6 @@ def _calculate_cost_savings(
     cost_mono = (monolithic_in * 0.075 / 1e6) + (monolithic_out * 0.30 / 1e6)
     cost_arb = (arbitrator_in * 0.075 / 1e6) + (arbitrator_out * 0.30 / 1e6)
     return max(0.0, cost_mono - cost_arb)
-
 def calculate_savings(run: dict[str, Any]) -> dict[str, Any]:
     """Calculate token footprint and cost savings against a monolithic baseline.
     Pricing based on standard Gemini 1.5/3.5 Flash:
@@ -233,8 +268,7 @@ def calculate_savings(run: dict[str, Any]) -> dict[str, Any]:
         "savings_method": "monolithic_baseline_estimate",
     })
     return run
-
-def save_run() -> dict[str, Any] | None:
+def save_run(notify_ambient: bool = True) -> dict[str, Any] | None:
     """Calculate final savings and append the run telemetry to local storage."""
     run = get_current_telemetry()
     if not run:
@@ -243,56 +277,20 @@ def save_run() -> dict[str, Any] | None:
     run["total_latency"] = time.time() - run["timestamp"]
     run = calculate_savings(run)
 
-    history = get_history()
-    # De-duplicate: update in-place if a run with the same invocation_id (or fallback to session_id) already exists
-    invocation_id = run.get("invocation_id")
-    session_id = run.get("session_id")
-    replaced = False
-    if invocation_id and invocation_id != "unknown":
-        for i, h in enumerate(history):
-            if h.get("invocation_id") == invocation_id:
-                history[i] = run
-                replaced = True
-                break
-    elif not replaced and session_id and session_id != "unknown":
-        for i, h in enumerate(history):
-            if h.get("session_id") == session_id:
-                history[i] = run
-                replaced = True
-                break
-    if not replaced:
-        history.append(run)
+    persist_run(DB_FILE, run)
 
-    # Keep database capped at last 1000 runs
-    if len(history) > 1000:
-        history = history[-1000:]
-
-    try:
-        with open(DB_FILE, "w") as f:
-            json.dump(history, f, indent=2)
-    except Exception as e:
-        print(f"Error saving telemetry: {e}")
-
-    # Notify ambient supervisors (experimental — never blocks the main flow)
-    try:
-        import pathlib
-
-        from app.app_utils.ambient_supervisor import on_run_saved
-        on_run_saved(run, str(pathlib.Path(DB_FILE).parent))
-    except Exception:
-        pass
+    if notify_ambient:
+        # Checkpoints skip observers so one graph run produces one final signal.
+        try:
+            from app.app_utils.ambient_supervisor import on_run_saved
+            on_run_saved(run, str(pathlib.Path(DB_FILE).parent))
+        except Exception:
+            pass
 
     return run
-
 def get_history() -> list[dict[str, Any]]:
     """Retrieve historical telemetry runs from local JSON database."""
-    if not os.path.exists(DB_FILE):
-        return []
-    try:
-        with open(DB_FILE) as f:
-            return json.load(f)
-    except Exception:
-        return []
+    return load_history(DB_FILE)
 
 def setup_telemetry() -> str | None:
     """Setup standard logging environment attributes (stub compat)."""
