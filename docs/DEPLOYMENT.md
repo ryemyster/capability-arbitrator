@@ -47,6 +47,25 @@ The full FastAPI surface is deployed via [`app/fast_api_app.py`](../app/fast_api
 
 > **Note on `/pubsub`:** On Cloud Run, the `/pubsub` route proxies to a remote Agent Runtime instance. It requires a companion Agent Runtime deployment to be running. All other routes (`/dashboard`, `/api/run`, `/api/metrics`, `/feedback`) work standalone.
 
+### Telemetry checkpoint behavior
+
+**Why:** ADK Playground and deployed runtimes do not always finish through the same
+app callback. HITL telemetry must not depend on one hosting surface.
+
+**What:** Workflow nodes save pending approvals, operator decisions, and terminal
+results. The Agent Runtime callback remains enabled and enriches the same row using
+its invocation metadata. A stable workflow run ID prevents duplicate rows.
+
+**How:** Active telemetry uses task-local context, so concurrent cloud requests remain
+isolated. Storage errors fail open: an unavailable telemetry file cannot stop the
+agent response. Cloud Run writes local telemetry under `/tmp`.
+
+**When:** Use these checkpoints for local Playground demos and as a deployment safety
+net. The JSON store is still instance-local and ephemeral in cloud environments. It
+does not provide durable, cross-instance production analytics; use managed telemetry
+storage before relying on dashboard totals across scaled Cloud Run or Agent Runtime
+instances.
+
 ### Local-only surfaces
 
 | Surface | Command | URL |

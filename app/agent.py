@@ -48,7 +48,13 @@ from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.scout_utils import build_scout_node
 from app.app_utils.skill_utils import load_skill_instructions
-from app.app_utils.telemetry import init_telemetry, record_hitl, record_security_screen
+from app.app_utils.telemetry import (
+    checkpoint_telemetry,
+    init_telemetry,
+    record_hitl,
+    record_security_screen,
+    restore_telemetry,
+)
 
 load_dotenv()
 
@@ -58,7 +64,6 @@ from app.app_utils.watchdog_utils import global_model, telemetry_watchdog
 target_dir = get_target_dir()
 caps = load_arbitrator_config(target_dir)
 mcp_settings = load_mcp_configs(target_dir)
-
 llm_scout = build_scout_node(caps)
 
 def router_node(ctx: Context, node_input: Any) -> Event:
@@ -76,13 +81,13 @@ def router_node(ctx: Context, node_input: Any) -> Event:
     return Event(output=prompt, route=tag)  # type: ignore
 
 router_fn = FunctionNode(name="router", func=router_node)
-
 async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event | RequestInput, None]:
     """Approval node with human-in-the-loop validation."""
     import sys
     from app.app_utils.telemetry import get_current_telemetry
     alert_msg = str(node_input) or "High-risk routing."
-    
+    restore_telemetry(ctx)
+
     def _route_after_approval() -> Event:
         telemetry = get_current_telemetry() or {}
         if telemetry.get("pii_detected"):
@@ -96,7 +101,8 @@ async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event |
         yield _route_after_approval()
         return
     if getattr(ctx, "resume_inputs", None) is None or "approval_req" not in ctx.resume_inputs:
-        record_hitl(escalated=True, approved=False, latency=0.0)
+        record_hitl(escalated=True, approved=None, latency=0.0)
+        checkpoint_telemetry(ctx, "workflow_node_checkpoint")
         yield RequestInput(interrupt_id="approval_req", message=f"🚨 PAUSING WORKFLOW 🚨\n{alert_msg}\n\nApprove routing? (y/n)")
         return
     approved = ctx.resume_inputs.get("approval_req", "")
@@ -104,18 +110,17 @@ async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event |
         approved = approved.get("output", "")
     is_approved = str(approved).lower() in ["y", "yes", "approve", "true"]
     record_hitl(escalated=True, approved=is_approved, latency=5.0)
+    checkpoint_telemetry(ctx, "workflow_node_checkpoint")
     msg = "Approval granted. Continuing..." if is_approved else "Approval denied. Halting workflow."
     yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-    
+
     if is_approved:
         yield _route_after_approval()
     else:
         yield Event(output=msg, route="halt")
-
 # Rerun on resume is critical so that when a human approves/denies, the node's code runs again
 # to dynamically yield the route ('scout', 'execute', or 'halt') instead of being bypassed by the cache.
 approval_fn = FunctionNode(name="approval", func=approval_node, rerun_on_resume=True)
-
 # 2. Dynamically set up MCP tools based on configs
 mcp_tools = []
 if mcp_settings:
@@ -188,7 +193,8 @@ for cap in caps:
 def security_screen(node_input: str) -> Event:
     """Security screen scanner to check inputs for PII leaks."""
     input_str = str(node_input)
-    init_telemetry(input_str)
+    run = init_telemetry(input_str)
+    run_state = {"telemetry_run_id": run["telemetry_run_id"]}
     pii_patterns = {
         "Social Security Number": r"\b\d{3}-\d{2,3}-\d{4}\b",
         "Email Address": r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b",
@@ -200,9 +206,9 @@ def security_screen(node_input: str) -> Event:
     if detected:
         pii_list = ", ".join(detected)
         record_security_screen(pii_detected=True, pii_types=detected)
-        return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval")  # type: ignore
+        return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval", state=run_state)  # type: ignore
     record_security_screen(pii_detected=False, pii_types=[])
-    return Event(output=node_input, route="safe")  # type: ignore
+    return Event(output=node_input, route="safe", state=run_state)  # type: ignore
 
 
 edges = [

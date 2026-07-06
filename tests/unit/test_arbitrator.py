@@ -16,11 +16,16 @@ Unit tests for the Capability Arbitrator core helper functions in app/agent.py.
 Tests deterministic math solving, prompt parsing, and skill instruction loading.
 """
 
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from app.agent import security_screen
-from app.app_utils.routing_utils import get_prompt_text
+import pytest
+from google.adk.events.request_input import RequestInput
+
+from app.agent import approval_node, security_screen
+from app.app_utils import telemetry
 from app.app_utils.math_utils import solve_math
+from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
 
 
@@ -76,6 +81,7 @@ def test_security_screen_pii_detection() -> None:
     event_ssn = security_screen._func("My SSN is 123-45-6789.")
     assert event_ssn.actions.route == "approval"
     assert "Social Security Number" in event_ssn.output
+    assert event_ssn.actions.state_delta["telemetry_run_id"]
 
     # Email
     event_email = security_screen._func("Contact me at user@example.com for details.")
@@ -96,3 +102,59 @@ def test_security_screen_pii_detection() -> None:
     event_ip = security_screen._func("The server IP is 192.168.1.1.")
     assert event_ip.actions.route == "approval"
     assert "IP Address" in event_ip.output
+
+
+@pytest.mark.asyncio
+async def test_approval_node_checkpoints_pending_interrupt(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Playground HITL writes its pending state before pausing."""
+    checkpoints: list[str] = []
+    monkeypatch.setattr(
+        "app.agent.checkpoint_telemetry",
+        lambda _ctx, source: checkpoints.append(source),
+    )
+    telemetry.init_telemetry("My SSN is 123-45-6789.")
+    ctx = SimpleNamespace(
+        resume_inputs=None,
+        session=SimpleNamespace(id="playground-session"),
+        state={"telemetry_run_id": "playground-run"},
+    )
+
+    events = [event async for event in approval_node(ctx, "PII detected")]
+
+    assert len(events) == 1
+    assert isinstance(events[0], RequestInput)
+    assert checkpoints == ["workflow_node_checkpoint"]
+    assert telemetry.get_current_telemetry()["hitl_status"] == "pending"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("answer", "expected_status"),
+    [("y", "approved"), ("n", "denied")],
+)
+async def test_approval_node_checkpoints_operator_decision(
+    answer: str,
+    expected_status: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Playground resume writes either operator decision before routing onward."""
+    checkpoints: list[str] = []
+    monkeypatch.setattr(
+        "app.agent.checkpoint_telemetry",
+        lambda _ctx, source: checkpoints.append(source),
+    )
+    telemetry.init_telemetry("My SSN is 123-45-6789.")
+    telemetry.record_security_screen(True, ["Social Security Number"])
+    ctx = SimpleNamespace(
+        resume_inputs={"approval_req": {"output": answer}},
+        session=SimpleNamespace(id=f"{expected_status}-session"),
+        state={"telemetry_run_id": f"{expected_status}-run"},
+    )
+
+    events = [event async for event in approval_node(ctx, "PII detected")]
+
+    assert len(events) == 2
+    assert checkpoints == ["workflow_node_checkpoint"]
+    assert telemetry.get_current_telemetry()["hitl_status"] == expected_status

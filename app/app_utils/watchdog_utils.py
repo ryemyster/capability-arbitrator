@@ -124,6 +124,9 @@ async def telemetry_watchdog_fn(ctx: Context, node_input: Any) -> Event:
         # Switch model configuration to a cheaper/faster model for the remainder of the session
         global_model.model = CHEAPER_MODEL
 
+    from app.app_utils.telemetry import checkpoint_telemetry
+    checkpoint_telemetry(ctx, "workflow_node_checkpoint")
+
     if isinstance(node_input, Event):
         return node_input
     return Event(output=node_input)

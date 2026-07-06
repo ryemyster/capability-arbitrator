@@ -34,6 +34,28 @@ graph TD
 | **4. Server E2E Tests** | Manual (Opt-In) | Verifies FastAPI application socket bindings, SSE stream framing, and real uvicorn startup. | `RUN_E2E=true uv run pytest tests/integration/test_server_e2e.py` |
 | **5. Live Model E2E** | Manual (Opt-In) | Tests real Vertex AI latency, prompt saturation, and actual Gemini API token usage. | `RUN_REAL_LLM=true uv run pytest tests/integration` |
 
+## HITL Telemetry Regression
+
+**Why:** An approval prompt pauses one invocation and resumes it later. Telemetry must
+update that invocation without erasing another session.
+
+**What:** Phase 19 verifies repository-root database resolution, Playground node
+checkpoints, approve/deny persistence, resume deduplication, task-local cloud request
+isolation, Agent Runtime callback convergence, dashboard decision counters, and
+five-second refresh behavior.
+
+**How:** Run the focused automated script:
+
+```bash
+uv run python tests/scripts/phase19-hitl-telemetry/test_hitl_telemetry.py
+```
+
+For terminal-to-dashboard verification, follow
+[QA_hitl_telemetry.md](../tests/manual_test_scripts/phase19-hitl-telemetry/QA_hitl_telemetry.md).
+
+**When:** Run this check after changing approval routing, workflow state, invocation
+identifiers, telemetry storage, deployment wrappers, or dashboard aggregation.
+
 Before committing or switching branches, remove generated local artifacts with:
 
 ```bash
@@ -187,4 +209,4 @@ Feature: Agent Runtime App Functionality
 > **MUST** update [docs/TESTING.md](../docs/TESTING.md) and [docs/kaggle_objectives.md](../docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
 
 ---
-*Last Updated: 2026-07-06T10:58:00-06:00 (Patched double HITL gate resume routing issue, normalized graph edges, and fixed dashboard telemetry de-duplication).*
+*Last Updated: 2026-07-06T11:57:13-06:00 (Added Playground node checkpoints and cloud-safe request isolation).*

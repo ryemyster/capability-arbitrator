@@ -514,6 +514,14 @@
                         <div class="stat-label">HITL Interrupt events</div>
                     </div>
                     <div class="stat-box">
+                        <div class="stat-value savings" id="val-hitl-approved">0</div>
+                        <div class="stat-label">HITL Approved</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="val-hitl-denied">0</div>
+                        <div class="stat-label">HITL Denied</div>
+                    </div>
+                    <div class="stat-box">
                         <div class="stat-value" id="val-mcp-calls">0</div>
                         <div class="stat-label">MCP Tool Actions</div>
                     </div>
@@ -811,6 +819,8 @@
             let totalScoutTTFT = 0;
             let piiCount = 0;
             let hitlCount = 0;
+            let hitlApprovedCount = 0;
+            let hitlDeniedCount = 0;
             let totalMcpCalls = 0;
             let devopsCount = 0;
 
@@ -821,7 +831,14 @@
                 totalCostSaved += run.cost_savings_usd || 0;
                 totalScoutTTFT += run.scout_latency || 0;
                 if (run.pii_detected) piiCount++;
-                if (run.hitl_escalated) hitlCount++;
+                if (run.hitl_escalated) {
+                    hitlCount++;
+                    if (run.hitl_status === 'approved' || (!run.hitl_status && run.hitl_approved)) {
+                        hitlApprovedCount++;
+                    } else if (run.hitl_status === 'denied' || (!run.hitl_status && !run.hitl_approved)) {
+                        hitlDeniedCount++;
+                    }
+                }
                 totalMcpCalls += run.mcp_tool_calls || 0;
                 if (run.scout_tag === 'math' || run.scout_tag === 'devops') devopsCount++;
             });
@@ -845,6 +862,8 @@
             document.getElementById('val-offload-rate').innerText = offloadRate.toFixed(2) + '%';
             document.getElementById('val-pii-blocked').innerText = piiCount;
             document.getElementById('val-hitl-escalations').innerText = hitlCount;
+            document.getElementById('val-hitl-approved').innerText = hitlApprovedCount;
+            document.getElementById('val-hitl-denied').innerText = hitlDeniedCount;
             document.getElementById('val-mcp-calls').innerText = totalMcpCalls;
 
             // Load last run into HUD
@@ -979,6 +998,8 @@
         // Initial Load
         fetchConfig();
         fetchMetrics();
+        // CLI and Agent Runtime sessions write outside this page, so refresh their metrics too.
+        window.setInterval(fetchMetrics, 5000);
     </script>
 </body>
 </html>

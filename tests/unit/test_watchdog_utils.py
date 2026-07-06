@@ -47,7 +47,16 @@ def _event(text: str, tokens: int, author: str = "user") -> Event:
 
 def _context(events: list[Event]) -> Any:
     """Builds the small context shape the watchdog reads during execution."""
-    return SimpleNamespace(session=SimpleNamespace(events=events))
+    return SimpleNamespace(
+        session=SimpleNamespace(events=events, id="watchdog-session"),
+        state={"telemetry_run_id": "watchdog-run"},
+    )
+
+
+@pytest.fixture(autouse=True)
+def disable_checkpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep watchdog unit tests from writing the shared telemetry database."""
+    monkeypatch.setattr(telemetry, "checkpoint_telemetry", lambda *_args: None)
 
 
 @pytest.mark.asyncio
@@ -115,3 +124,23 @@ async def test_watchdog_switches_model_above_latency_budget(
 
     assert global_model.model == CHEAPER_MODEL
     assert len(ctx.session.events) == 1
+
+
+@pytest.mark.asyncio
+async def test_watchdog_checkpoints_terminal_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The terminal graph node saves even when the app callback is unavailable."""
+    checkpoints: list[tuple[Any, str]] = []
+    monkeypatch.setattr(
+        telemetry,
+        "checkpoint_telemetry",
+        lambda ctx, source: checkpoints.append((ctx, source)),
+    )
+    monkeypatch.setattr(telemetry, "get_current_telemetry", lambda: {"timestamp": 99.0})
+    monkeypatch.setattr("app.app_utils.watchdog_utils.time.time", lambda: 100.0)
+    ctx = _context([_event("completed prompt", 100)])
+
+    await telemetry_watchdog_fn(ctx, "completed output")
+
+    assert checkpoints == [(ctx, "workflow_node_checkpoint")]

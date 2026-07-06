@@ -94,6 +94,9 @@ These metrics are calculated at runtime by the telemetry logger ([app/app_utils/
 The dashboard is intentionally explicit about data provenance:
 
 * **Run source** shows whether the row came from the dashboard playground, Pub/Sub integration, local test runner, or Agent Runtime.
+* **Shared local storage** resolves to the repository-root `telemetry_db.json` when commands start from the repository. Writes use a file lock and atomic replacement so overlapping processes do not discard each other's rows.
+* **Workflow checkpoints** persist HITL interrupts, decisions, and terminal results directly from graph nodes. ADK Playground telemetry therefore does not depend on the app-level completion callback.
+* **Cloud request isolation** keeps each active run in task-local context. Agent Runtime and Cloud Run requests cannot overwrite another request's in-memory metrics before persistence.
 * **Scout token source** is `actual` when the GenAI SDK reports usage and `estimated` when usage metadata is missing.
 * **Execution token source** is `deterministic_zero` for Math and DevOps offload, `actual` when a node reports tokens, and `estimated` when ADK does not expose downstream LLM node usage.
 * **Monolithic footprint and dollar savings** are baseline estimates used for comparison, not bills from Google Cloud.
@@ -114,7 +117,12 @@ These cards aggregate all rows currently persisted in `telemetry_db.json`.
 | **Deterministic Offload** | `scout_tag` | Percent of runs routed to `math` or `devops` | Outcome 2: Deterministic offload |
 | **PII Screens Triggered** | `pii_detected` | Count of telemetry rows where PII detection was true | Outcome 3: PII detection and escalation |
 | **HITL Interrupt events** | `hitl_escalated` | Count of telemetry rows where approval was requested | Outcome 3: Human-in-the-loop governance |
+| **HITL Approved** | `hitl_status=approved` | Count of interrupted rows where the operator approved execution | Outcome 3: Explicit human authorization |
+| **HITL Denied** | `hitl_status=denied` | Count of interrupted rows where the operator denied execution; pending interrupts are excluded | Outcome 3: Explicit human intervention |
 | **MCP Tool Actions** | `mcp_tool_calls` | Sum of MCP tool calls recorded in telemetry | Execution observability |
+
+The page refreshes these cumulative cards every five seconds. Use this behavior when an
+agent runs from a separate terminal; restarting the dashboard is not required.
 
 ### Latest Run Verified Outcomes
 
