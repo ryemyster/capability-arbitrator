@@ -50,6 +50,28 @@ dashboard shows approved and denied decisions without depending on an app callba
 - [ ] No dashboard or runner restart is needed.
 - [ ] Playground still displays the expected Security Screen, Approval, Scout, and execution transitions.
 
+## Ambiguous routing resume test
+
+1. Create another new Playground session.
+2. Send:
+
+   ```text
+   Please do some math calculations, or maybe look up code files, or write a summary. I'm not sure which capability we need here.
+   ```
+
+3. Confirm Scout selects `math` with confidence below `75%`.
+4. Enter `y` to approve Scout's suggested route.
+
+Expected result:
+
+- [ ] Exactly one HITL popup appears.
+- [ ] The approval output routes directly to Scout's suggested capability.
+- [ ] The original prompt remains present after resume.
+- [ ] No `{capability_tag: "approval", prompt: ""}` event appears.
+- [ ] A later, genuinely separate gate would use a different interrupt ID.
+- [ ] Entering `y` accepts Scout's suggestion without producing another popup.
+- [ ] Entering a capability name re-prompts for `y` or `n`; it does not override Scout.
+
 ## Automated companion
 
 ```bash

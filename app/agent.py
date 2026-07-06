@@ -18,7 +18,6 @@ Purpose: Defines the dynamic capability arbitrator agent workflow.
 Why/How: A progressive disclosure traffic router that assigns tasks to nodes based on target workspace configurations.
 """
 import re
-from collections.abc import AsyncGenerator
 from typing import Any
 
 from dotenv import load_dotenv
@@ -26,7 +25,6 @@ from google.adk.agents import LlmAgent
 from google.adk.agents.context import Context
 from google.adk.apps import App
 from google.adk.events.event import Event
-from google.adk.events.request_input import RequestInput
 from google.adk.plugins.debug_logging_plugin import DebugLoggingPlugin
 from google.adk.plugins.logging_plugin import LoggingPlugin
 from google.adk.tools.mcp_tool import McpToolset
@@ -36,6 +34,10 @@ from google.genai import types
 from mcp import StdioServerParameters
 
 from app.app_utils.compliance_judge_utils import compliance_judge
+from app.app_utils.approval_utils import (
+    approval_fn,
+    build_approval_state,
+)
 from app.app_utils.config_loader import (
     get_target_dir,
     load_arbitrator_config,
@@ -49,11 +51,8 @@ from app.app_utils.scout_supervisor_utils import scout_supervisor
 from app.app_utils.scout_utils import build_scout_node
 from app.app_utils.skill_utils import load_skill_instructions
 from app.app_utils.telemetry import (
-    checkpoint_telemetry,
     init_telemetry,
-    record_hitl,
     record_security_screen,
-    restore_telemetry,
 )
 
 load_dotenv()
@@ -78,49 +77,12 @@ def router_node(ctx: Context, node_input: Any) -> Event:
     else:
         tag = str(node_input)
         prompt = get_prompt_text(ctx) or str(node_input)
+    if tag == "approval":
+        state = build_approval_state("router_approval", "halt", prompt)
+        return Event(output=prompt, route=tag, state=state)  # type: ignore
     return Event(output=prompt, route=tag)  # type: ignore
 
 router_fn = FunctionNode(name="router", func=router_node)
-async def approval_node(ctx: Context, node_input: Any) -> AsyncGenerator[Event | RequestInput, None]:
-    """Approval node with human-in-the-loop validation."""
-    import sys
-    from app.app_utils.telemetry import get_current_telemetry
-    alert_msg = str(node_input) or "High-risk routing."
-    restore_telemetry(ctx)
-
-    def _route_after_approval() -> Event:
-        telemetry = get_current_telemetry() or {}
-        if telemetry.get("pii_detected"):
-            return Event(output=telemetry.get("prompt", ""), route="scout")
-        tag = telemetry.get("scout_tag", "approval")
-        return Event(output={"capability_tag": tag, "prompt": telemetry.get("prompt", "")}, route="execute")
-
-    if any("_inference_runner.py" in arg for arg in sys.argv):
-        msg = f"Approval auto-granted in eval mode. Details: {alert_msg}"
-        yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-        yield _route_after_approval()
-        return
-    if getattr(ctx, "resume_inputs", None) is None or "approval_req" not in ctx.resume_inputs:
-        record_hitl(escalated=True, approved=None, latency=0.0)
-        checkpoint_telemetry(ctx, "workflow_node_checkpoint")
-        yield RequestInput(interrupt_id="approval_req", message=f"🚨 PAUSING WORKFLOW 🚨\n{alert_msg}\n\nApprove routing? (y/n)")
-        return
-    approved = ctx.resume_inputs.get("approval_req", "")
-    if isinstance(approved, dict):
-        approved = approved.get("output", "")
-    is_approved = str(approved).lower() in ["y", "yes", "approve", "true"]
-    record_hitl(escalated=True, approved=is_approved, latency=5.0)
-    checkpoint_telemetry(ctx, "workflow_node_checkpoint")
-    msg = "Approval granted. Continuing..." if is_approved else "Approval denied. Halting workflow."
-    yield Event(content=types.Content(role="model", parts=[types.Part.from_text(text=msg)]))
-
-    if is_approved:
-        yield _route_after_approval()
-    else:
-        yield Event(output=msg, route="halt")
-# Rerun on resume is critical so that when a human approves/denies, the node's code runs again
-# to dynamically yield the route ('scout', 'execute', or 'halt') instead of being bypassed by the cache.
-approval_fn = FunctionNode(name="approval", func=approval_node, rerun_on_resume=True)
 # 2. Dynamically set up MCP tools based on configs
 mcp_tools = []
 if mcp_settings:
@@ -206,6 +168,9 @@ def security_screen(node_input: str) -> Event:
     if detected:
         pii_list = ", ".join(detected)
         record_security_screen(pii_detected=True, pii_types=detected)
+        run_state.update(
+            build_approval_state("pii_screen", "scout", input_str)
+        )
         return Event(output=f"[SECURITY ALERT] PII detected in input. Please review. (Types: {pii_list})", route="approval", state=run_state)  # type: ignore
     record_security_screen(pii_detected=False, pii_types=[])
     return Event(output=node_input, route="safe", state=run_state)  # type: ignore

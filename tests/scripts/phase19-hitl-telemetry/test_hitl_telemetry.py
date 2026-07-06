@@ -19,6 +19,7 @@ def main() -> int:
             "tests/unit/test_telemetry.py",
             "tests/unit/test_dashboard.py",
             "tests/unit/test_arbitrator.py",
+            "tests/unit/test_scout_supervisor_utils.py",
             "tests/unit/test_watchdog_utils.py",
             "-q",
         ],

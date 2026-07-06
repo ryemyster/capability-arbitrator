@@ -75,6 +75,21 @@ The graph constructs available nodes and toolsets at startup. For each request, 
 | 7 | Product KPI Auditor | Writes outcome verdicts and violations into telemetry. |
 | 8 | Telemetry Watchdog | Can summarize oversized session history and switch the shared model to a cheaper fallback. |
 
+### Approval resume state
+
+Approval routing uses ADK workflow state as its source of truth. Before a gate pauses,
+the preceding node stores the original prompt, selected capability, next route, gate
+kind, and a unique interrupt ID.
+
+- A PII gate resumes to Scout after approval.
+- A low-confidence gate asks the operator to approve or deny Scout's persisted route.
+- A plain `y` accepts Scout's suggested capability, and `n` denies execution. The
+  operator is not responsible for selecting a replacement capability.
+- A router-level approval with no executable capability fails closed.
+- A later gate receives a new interrupt ID, so it cannot consume an earlier answer.
+
+Telemetry records the gate outcome but does not decide where the workflow routes.
+
 ---
 
 ## Component Inventory

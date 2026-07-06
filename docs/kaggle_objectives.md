@@ -16,7 +16,7 @@ This document tracks our progress against the master rubric in [docs/RUBRIC.md](
     *   *Citation:* Completed in [app/agent.py:L125-136](app/agent.py#L125-136) via `router_node` and conditional edges in [L252-267](app/agent.py#L252-267). *(Completed: Phase 14 [Scout Supervisor confidence gate and Scout module split] in [app/app_utils/scout_utils.py](app/app_utils/scout_utils.py), [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py), and [app/agent.py](app/agent.py))* *(Completed: Outcome hardening [deterministic math route] in [app/app_utils/math_node_utils.py](app/app_utils/math_node_utils.py) and [app/app_utils/config_loader.py](app/app_utils/config_loader.py))*
 *   **[x] Includes a Human-in-the-Loop (HITL) Node**
     *   *What:* A state hook that pauses execution for high-risk actions (like deleting databases) to await human permission.
-    *   *Citation:* Completed in [app/agent.py:L138-156](app/agent.py#L138-156) via `approval_node` utilizing `RequestInput` (with auto-grant logic in eval mode). *(Completed: Phase 14 [Low-confidence Scout decisions route to HITL approval] in [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py))* *(Hardened: Phase 19 [Playground node checkpoints persist pending, approved, and denied states while stable run IDs prevent duplicates] in [app/agent.py](app/agent.py), [app/app_utils/telemetry.py](app/app_utils/telemetry.py), and [tests/unit/test_arbitrator.py](tests/unit/test_arbitrator.py))*
+    *   *Citation:* Completed via `approval_node` utilizing `RequestInput` in [app/app_utils/approval_utils.py](app/app_utils/approval_utils.py). *(Completed: Phase 14 [Low-confidence Scout decisions route to HITL approval] in [app/app_utils/scout_supervisor_utils.py](app/app_utils/scout_supervisor_utils.py))* *(Hardened: Phase 19 [Playground checkpoints persist gate outcomes, workflow state preserves Scout's route and original prompt, unique interrupt IDs support sequential gates, and binary approval does not make the operator choose routing] in [app/app_utils/approval_utils.py](app/app_utils/approval_utils.py), [app/app_utils/telemetry.py](app/app_utils/telemetry.py), and [tests/unit/test_arbitrator.py](tests/unit/test_arbitrator.py))*
 
 ### Section B: Specialization (Skills)
 
@@ -90,4 +90,4 @@ The following items are still required to achieve a gold-standard project submis
 *All objectives are now completed and verified!*
  
 ---
-*Last Updated: 2026-07-06T11:57:13-06:00 (Added Playground node checkpoints, stable workflow run IDs, and cloud concurrency coverage).*
+*Last Updated: 2026-07-06T12:20:00-06:00 (Added workflow-state HITL routing and unique sequential gate IDs).*

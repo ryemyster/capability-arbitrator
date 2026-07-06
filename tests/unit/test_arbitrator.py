@@ -22,8 +22,12 @@ from unittest.mock import MagicMock
 import pytest
 from google.adk.events.request_input import RequestInput
 
-from app.agent import approval_node, security_screen
+from app.agent import security_screen
 from app.app_utils import telemetry
+from app.app_utils.approval_utils import (
+    approval_node,
+    build_approval_state,
+)
 from app.app_utils.math_utils import solve_math
 from app.app_utils.routing_utils import get_prompt_text
 from app.app_utils.skill_utils import load_skill_instructions
@@ -111,14 +115,19 @@ async def test_approval_node_checkpoints_pending_interrupt(
     """Playground HITL writes its pending state before pausing."""
     checkpoints: list[str] = []
     monkeypatch.setattr(
-        "app.agent.checkpoint_telemetry",
+        "app.app_utils.approval_utils.checkpoint_telemetry",
         lambda _ctx, source: checkpoints.append(source),
     )
     telemetry.init_telemetry("My SSN is 123-45-6789.")
     ctx = SimpleNamespace(
         resume_inputs=None,
         session=SimpleNamespace(id="playground-session"),
-        state={"telemetry_run_id": "playground-run"},
+        state={
+            "telemetry_run_id": "playground-run",
+            **build_approval_state(
+                "pii_screen", "scout", "My SSN is 123-45-6789."
+            ),
+        },
     )
 
     events = [event async for event in approval_node(ctx, "PII detected")]
@@ -142,15 +151,22 @@ async def test_approval_node_checkpoints_operator_decision(
     """Playground resume writes either operator decision before routing onward."""
     checkpoints: list[str] = []
     monkeypatch.setattr(
-        "app.agent.checkpoint_telemetry",
+        "app.app_utils.approval_utils.checkpoint_telemetry",
         lambda _ctx, source: checkpoints.append(source),
     )
     telemetry.init_telemetry("My SSN is 123-45-6789.")
     telemetry.record_security_screen(True, ["Social Security Number"])
+    gate_state = build_approval_state(
+        "pii_screen", "scout", "My SSN is 123-45-6789."
+    )
+    interrupt_id = gate_state["approval_interrupt_id"]
     ctx = SimpleNamespace(
-        resume_inputs={"approval_req": {"output": answer}},
+        resume_inputs={interrupt_id: {"output": answer}},
         session=SimpleNamespace(id=f"{expected_status}-session"),
-        state={"telemetry_run_id": f"{expected_status}-run"},
+        state={
+            "telemetry_run_id": f"{expected_status}-run",
+            **gate_state,
+        },
     )
 
     events = [event async for event in approval_node(ctx, "PII detected")]
@@ -158,3 +174,123 @@ async def test_approval_node_checkpoints_operator_decision(
     assert len(events) == 2
     assert checkpoints == ["workflow_node_checkpoint"]
     assert telemetry.get_current_telemetry()["hitl_status"] == expected_status
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_approval_resumes_selected_capability(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Approving an ambiguous math route continues to math with the full prompt."""
+    prompt = "Please do math, inspect code, or write a summary."
+    gate_state = build_approval_state(
+        "low_confidence", "execute", prompt, capability_tag="math"
+    )
+    interrupt_id = gate_state["approval_interrupt_id"]
+    monkeypatch.setattr(
+        "app.app_utils.approval_utils.checkpoint_telemetry",
+        lambda *_args: None,
+    )
+    telemetry.init_telemetry(prompt)
+    ctx = SimpleNamespace(
+        resume_inputs={interrupt_id: {"output": "y"}},
+        session=SimpleNamespace(id="ambiguous-session"),
+        state={
+            "telemetry_run_id": "ambiguous-run",
+            **gate_state,
+        },
+    )
+
+    events = [event async for event in approval_node(ctx, "Low confidence")]
+
+    assert events[-1].actions.route == "execute"
+    assert events[-1].output == {"capability_tag": "math", "prompt": prompt}
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_yes_accepts_scout_suggestion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic yes accepts the suggested capability without another gate."""
+    gate_state = build_approval_state(
+        "low_confidence", "execute", "ambiguous prompt", capability_tag="math"
+    )
+    interrupt_id = gate_state["approval_interrupt_id"]
+    monkeypatch.setattr(
+        "app.app_utils.approval_utils.checkpoint_telemetry",
+        lambda *_args: None,
+    )
+    telemetry.init_telemetry("ambiguous prompt")
+    ctx = SimpleNamespace(
+        resume_inputs={interrupt_id: {"output": "y"}},
+        session=SimpleNamespace(id="explicit-choice-session"),
+        state={
+            "telemetry_run_id": "explicit-choice-run",
+            **gate_state,
+        },
+    )
+
+    events = [event async for event in approval_node(ctx, "Low confidence")]
+
+    assert len(events) == 2
+    assert events[-1].actions.route == "execute"
+    assert events[-1].output == {
+        "capability_tag": "math",
+        "prompt": "ambiguous prompt",
+    }
+
+
+@pytest.mark.asyncio
+async def test_low_confidence_capability_name_reprompts_for_yes_or_no(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The operator approves Scout's route instead of choosing another route."""
+    prompt = "Ambiguous mixed-capability prompt"
+    gate_state = build_approval_state(
+        "low_confidence", "execute", prompt, capability_tag="math"
+    )
+    interrupt_id = gate_state["approval_interrupt_id"]
+    monkeypatch.setattr(
+        "app.app_utils.approval_utils.checkpoint_telemetry",
+        lambda *_args: None,
+    )
+    telemetry.init_telemetry(prompt)
+    ctx = SimpleNamespace(
+        resume_inputs={interrupt_id: {"output": "research"}},
+        session=SimpleNamespace(id="override-session"),
+        state={"telemetry_run_id": "override-run", **gate_state},
+    )
+
+    events = [event async for event in approval_node(ctx, "Low confidence")]
+
+    assert isinstance(events[-1], RequestInput)
+    assert "Approve this route? (y/n)" in events[-1].message
+
+
+@pytest.mark.asyncio
+async def test_second_gate_ignores_first_gate_answer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A later gate emits a new interrupt instead of reusing an earlier reply."""
+    first_gate = build_approval_state("first", "execute", "prompt", "math")
+    second_gate = build_approval_state("second", "halt", "prompt")
+    monkeypatch.setattr(
+        "app.app_utils.approval_utils.checkpoint_telemetry",
+        lambda *_args: None,
+    )
+    telemetry.init_telemetry("prompt")
+    ctx = SimpleNamespace(
+        resume_inputs={
+            first_gate["approval_interrupt_id"]: {"output": "y"},
+        },
+        session=SimpleNamespace(id="multi-gate-session"),
+        state={
+            "telemetry_run_id": "multi-gate-run",
+            **second_gate,
+        },
+    )
+
+    events = [event async for event in approval_node(ctx, "Second approval")]
+
+    assert len(events) == 1
+    assert isinstance(events[0], RequestInput)
+    assert events[0].interrupt_id == second_gate["approval_interrupt_id"]

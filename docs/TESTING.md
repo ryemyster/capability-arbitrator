@@ -42,7 +42,10 @@ update that invocation without erasing another session.
 **What:** Phase 19 verifies repository-root database resolution, Playground node
 checkpoints, approve/deny persistence, resume deduplication, task-local cloud request
 isolation, Agent Runtime callback convergence, dashboard decision counters, and
-five-second refresh behavior.
+five-second refresh behavior. It also verifies that low-confidence approval resumes
+the selected capability with the original prompt and that sequential gates use
+different interrupt IDs. Low-confidence gates remain binary: approval accepts Scout's
+persisted suggestion, denial halts, and other answers are re-prompted.
 
 **How:** Run the focused automated script:
 
@@ -209,4 +212,4 @@ Feature: Agent Runtime App Functionality
 > **MUST** update [docs/TESTING.md](../docs/TESTING.md) and [docs/kaggle_objectives.md](../docs/kaggle_objectives.md) in the same commit. Automated pre-commit quality hooks check for documentation synchronization.
 
 ---
-*Last Updated: 2026-07-06T11:57:13-06:00 (Added Playground node checkpoints and cloud-safe request isolation).*
+*Last Updated: 2026-07-06T12:20:00-06:00 (Added workflow-state approval routing and unique sequential gate IDs).*
