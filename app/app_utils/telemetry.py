@@ -80,11 +80,9 @@ def update_telemetry(updates: dict[str, Any]) -> None:
         run.update(updates)
         active_run_telemetry.set(run)
 
-
 def reset_telemetry() -> None:
     """Clear task-local telemetry between isolated tests or operations."""
     active_run_telemetry.set(None)
-
 
 def restore_telemetry(ctx: Any) -> dict[str, Any] | None:
     """Restore an interrupted run from workflow state in a new async request."""
@@ -105,7 +103,6 @@ def restore_telemetry(ctx: Any) -> dict[str, Any] | None:
             active_run_telemetry.set(run)
     return run
 
-
 def checkpoint_telemetry(ctx: Any, run_source: str) -> dict[str, Any] | None:
     """Persist the current graph state without depending on an app callback."""
     run = restore_telemetry(ctx)
@@ -120,7 +117,11 @@ def checkpoint_telemetry(ctx: Any, run_source: str) -> dict[str, Any] | None:
             run_source if run.get("run_source") == "unknown" else run["run_source"]
         ),
     })
-    return save_run(notify_ambient=False)
+    saved = save_run(notify_ambient=False)
+    state = getattr(ctx, "state", None)
+    if state is not None and saved is not None:  # outlives the ContextVar across tasks
+        state["telemetry_snapshot"] = dict(saved)
+    return saved
 def record_security_screen(pii_detected: bool, pii_types: list[str]) -> None:
     """Record PII screen details."""
     updates: dict[str, Any] = {
